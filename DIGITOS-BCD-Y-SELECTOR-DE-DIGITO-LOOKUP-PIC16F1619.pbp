@@ -1,0 +1,85 @@
+'****************************************************************
+'*  Name    : BCD AND L1,L2,L3                                  *
+'*  Author  : Gabriel Lee Alvarez                               *
+'*  Notice  : Copyright (c) 2019 Tecnologico de mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 12/11/2019                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+;XXXXXXXXXXXXXXXXXXXXXXXXXXX PIC16F1619 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+TRISA =%111100;  RA0:RA1 AS OUTPUTS, RA2:RA5 AS INPUT
+TRISB =%00010000; RB0:RB3 AS OUTPUT,RB4 AS INPUT, RB5:RB7 AS OUTPUT
+TRISC =%11000000;RC0:RC5 AS OUTPUT,RC6:RC7 AS INPUT
+ANSELA =0; ALL PINS ARE DIGITALS
+ANSELB= 0; ALL PINS ARE DIGITAL
+ANSELC=0;         PORTC SET AS DIGITAL
+LATA = 0;        ALL LATA IS DISABLED
+LATB = 0;       
+LATC = 0;
+OSCCON =%01101000;SET 4MHZ EXTERNAL OSC 
+OSCTUNE = 0;      CLOCK WORKING WITH FACTORY CALIBRATION
+;-----------------------------pull ups------------------------------------------
+OPTION_REG.7 = 0; PULL UPS INTERN IS ENABLE
+WPUB.4 = 1; ENABLE PULL UP IN RB4
+WPUA = %111100; RA2:RA5 PULL UPS IS ENABLE 
+WPUC = %11000000; RC6:RC7 PULL UP IS ENEABLE
+;-------------------------------------------------------------------------------
+;----------------------------SET ALIAS------------------------------------------
+A_OUT VAR PORTC.0;                      IN THIS ZONE YOU CAN THE PINS 
+B_OUT VAR PORTC.1;
+C_OUT VAR PORTC.2;
+D_OUT VAR PORTC.3;
+CCP1 VAR PORTC.5;
+;---                                IN THIS ZONE, YOU CAN MODIFY THE PINS TO USE
+L1 VAR PORTC.4;
+L2 VAR PORTA.1;
+L3 VAR PORTA.0;
+;---
+PB VAR PORTB.4;
+;----
+A_IN VAR PORTA.2;
+B_IN VAR PORTA.3;
+C_IN VAR PORTA.4;
+D_IN VAR PORTA.5;
+;----
+X1 VAR PORTC.6;
+X2 VAR PORTC.7;
+;-------------------------------------------------------------------------------
+;-------------------------HPWM SET 250hz----------------------------------------
+;DEFINE CONFIG1  %0010011111110;
+RC5PPS = %00001100;  SETTING CCP1 AS AN OUTPUT AND ENABLE IT
+CCP1CON = %10001100; PWM mode selection and CCPx enabled
+PR2 = %11111101;     Value obtained from equation
+T2CON = %11000000;   enabling timer 2
+CCPTMRS = %11111100; CCP1 IS BASED OFF TIMER 2
+CCPR1L = %11110100;  VALUE obtained from equation
+CCPR1H =%00000001;    VALUE obtained from equation
+;-----------------------------------------------------------------------------
+;---------------------------VARIABLES-------------------------------------------
+SEL VAR BYTE; SELECTION OF THE DIGIT
+PATTERN VAR BYTE;
+;-------------------------------------------------------------------------------
+;-------------------------ALGORITHM---------------------------------------------
+SEL = 0;   CLEAR THE VARIABLE SEL;
+RPT:; LABEL RPT
+
+HERE:; LABEL HERE
+A_OUT = A_IN; PIN A_OUT IS EQUAL TO A_IN
+B_OUT = B_IN; PIN B_OUT IS EQUAL TO B_IN
+C_OUT = C_IN; PIN C_OUT IS EQUAL TO C_IN
+D_OUT = D_IN; PIN D_OUT IS EQUAL TO D_IN
+IF PB = 1 THEn HERE;IF PUS- BUTTON IS NOT PRESSED, GO TO THE LABEL "HERE"
+
+SEL = X2*2 + X1;SAVE THE PINS X1 AND X2 IN THE VARIABLE WITH THE BINARY WEIGHT
+lookup SEL,[$00,$01,$02,$04],PATTERN;
+L1 = PATTERN.0;
+L2 = PATTERN.1;
+L3 = PATTERN.2; 
+PAUSE 1;
+L1 = 0;
+L2 = 0;
+L3 = 0;
+goto rpt; GO TO THE LABEL RPT;
+end; END OF THE ALGORITHM
