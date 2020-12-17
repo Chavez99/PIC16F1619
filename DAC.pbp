@@ -1,0 +1,32 @@
+'****************************************************************
+'*  Name    : Digital to Analog converter                       *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 29/04/2020                                        *
+'*  Version : 1.5                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+ASM_CONFIG_MCLRE_OFF;      /MCLR to Vdd
+ASM_CONFIG_MCLRE_OFF;      /MCLR to Vdd
+TRISA=0;
+TRISB=0;
+TRISC=%11111111;
+ANSELA=0;
+ANSELB=0;
+ANSELC=0;
+OSCCON = %00100110; = $26, reloj establecido a 4 Mhz
+OSCTUNE = 0; modulo oscilador es establecido a la frecuencia de fabrica
+DAC1CON0 = %10100000; 
+I VAR BYTE
+X VAR WORD 
+;OPTION_REG.7=0;  
+RPT: PORTA=0:PORTB=0:PORTC=0;
+     X=0;
+     X=PORTC
+     pause 10
+     DAC1CON1 =X;
+     GOTO RPT
+eND        
+

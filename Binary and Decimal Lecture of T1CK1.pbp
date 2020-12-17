@@ -1,0 +1,46 @@
+'****************************************************************
+'*  Name    : Binary and Decimal Lecture of T1CK1               *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 13/05/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+;------------------------Practice Applied Pulses on T1CKI ---------------------------
+ANSELA=%00000000;     Set as digital PORTA
+TRISA =%11111100;     Set as inputs RA2:7
+ANSELB=%00000000;     Set as digital PORTB
+TRISB =%00000000;     Set as output PORTB
+TRISC =%00000000;     Set as output PORTC
+OSCCON=%01101000;     Set the internal oscillator to 4MHz
+OSCTUNE=0;            Oscillator module is running at the factory-calibrated frequency.
+PORTA=0;              Clear the PORTA
+PORTB=0;              Clear the PORTC
+CTOT VAR WORD :CNT1 VAR BYTE: CNT2 VAR WORD;  Declaring CTOT and CNT2 as word variables and CNT1 as a byte variable
+DEFINE LCD_DREG PORTC;      Define PORTC as the data PORT
+DEFINE LCD_DBIT 0;          Define 0 as the beggining of data
+DEFINE RSREG PORTA;         Define PORTA as the register PORT
+DEFINE LCD_RSBIT 0;         Define RA0 as the register pin
+DEFINE LCD_EREG PORTA;      Define RA as the enable PORT
+DEFINE LCD_EBIT 1;          Define 1 as the enable PIN
+DEFINE LCD_BITS 4;          Define 4 as the bus data size
+DEFINE LCD_LINES 2;         Define 2 as the number of lines of the LCD
+DEFINE LCD_COMMANDUS 1500;  Define 1500 as the commandus delay time
+DEFINE LCD_DATAUS 44;       Define 44 as the delay bus data
+STY:
+    CTOT=0:CNT1=0:CNT2=0;           Clear all the variables
+    TMR1L=0:TMR1H=0;                Clear the timer resgister
+    T1CON=%10000101 ;               Enable counter T1CON0 = 1
+    pause 777 ;                     Pause of 777 mS
+    T1CON=%10000100 ;               Disable counter T1CON0 = 1
+    CNT1=TMR1L;                     Transfer low-byte count to CNT1
+    CNT2=TMR1H*256;                 Transfer high-byte count to CNT2
+    CTOT=CNT1+CNT2;                 Get total reading from both bytes
+LCDOUT $FE,1," BIN= ",bin CTOT;     Show data in binary
+LCDOUT $FE,$C0," DEC= ",DEC CTOT;   Show data in decimal
+PAUSE 100;                          Pause of 100ms
+GOTO STY;                           Back to STY
+END;                                End of the algorithm
+ 

@@ -1,0 +1,61 @@
+'****************************************************************
+'*  Name    : Practice #8.1. Changing the Scale of Temperatures *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/17/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+TRISA=%00000010;               RA1 Is set Input
+ANSELA=%00000010;              PORTA is set Analog
+TRISB=%00000000;               PORTB is set Output
+ANSELB=%00000000;              PORTA is set Analog
+TRISC=%00000000;               PORTC is set Output
+ANSELC=%00000000;              PORTC is set Analog
+CM1CON0=7;                     It defines that the comparator is synchronous with hysteresis and with normal power at higher speed.
+OSCCON = $6A;                  Internal Oscillator is set to 4MHz
+OSCTUNE = 0;                   Oscillator module is running at the factory-calibrated frequency.
+LATA=0:LATB=0:LATC=0;          Clearing Latches
+PAUSE 10;                      Pause of 10ms
+DEFINE adc_bits 8;             A/D converter set to 8 bit resolution
+define adc_clock 3;            Set on the A/D internal clock
+define adc_sampleUs 50;        Set a time lecture of 50ms
+V VAR WORD: I VAR BYTE ;       Define V as a word variable & I as a byte variable
+PORTA=0:PORTB=0 ;              Clearing PORTA & PORTB
+
+RPT:
+PORTC=0:PORTA=0;               CLEARING PORT A & PORTC
+ADCIN 1, V ;                   Read the voltage on AN1 
+    IF V<$1F THEN FLD1;        <60°F
+    IF V>$1F THEN PORTC.0=1;    60°F
+    IF V>$20 THEN PORTC.1=1;    62°F
+    IF V>$21 THEN PORTC.2=1;    64°F
+    IF V>$22 THEN PORTC.3=1;    66°F
+    IF V>$23 THEN PORTC.4=1;    68°F
+    IF V>$24 THEN PORTC.5=1;    70°F
+    IF V>$25 THEN PORTC.6=1;    72°F
+    IF V>$26 THEN PORTC.7=1;    74°F
+    IF V>$27 THEN PORTA.4=1;    76°F     
+    IF V>$28 THEN PORTA.5=1;    78°F
+    IF V>$29 THEN FLD2;        >80°F
+    PAUSE 50;                  Pause of 50ms
+    GOTO RPT;                  Back to RPT
+FLD1: 
+    FOR I=1 TO 2;              From I to 2 is set the for cicle
+    PORTC.0=1;                 Set of the 1st LED
+    PAUSE 250;                 Pause of 250ms
+    PORTC.0=0;                 Set off the 1st
+    PAUSE 250;                 Pause of 250ms
+    NEXT I;                    Return I
+    GOTO RPT;                  Back to RPT
+FLD2: 
+    FOR I=1 TO 2;              From I to 2 is set the for cicle
+    PORTA.5=1;                 Set on the last LED
+    PAUSE 250;                 Pause of 250ms
+    PORTA.5=0;                 Set off the last LED
+    PAUSE 250;                 Pause of 250ms
+    NEXT I;                    Return I
+    GOTO RPT;                  Back to RPT
+END;                           End of the algorithm

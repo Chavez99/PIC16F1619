@@ -1,0 +1,68 @@
+'****************************************************************
+'*  Name    : Contador de 0-99 con botón externo                *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 23/05/2020                                        *
+'*  Version : 1.2                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+ASM_CONFIG_MCLRE_OFF;      /MCLR to Vdd 
+ANSELA=0;                  Set PORTA to Digital
+TRISA =%00100000;          Set RA4 as Input
+ANSELB=0;                  Set PORTB to Digital
+TRISB =0;                  Set PORTB as Output
+ANSELC=0;                  Set PORTC to Digital
+TRISC =0;                  Set PORTC as Output     
+OSCCON=%01101000;          Internal oscillator set to 4.000 MHz
+OSCTUNE=0;                 Oscillator module is running at the factory-calibrated frequency
+LATA = 0: LATB= 0: LATC= 0; Clearing PORTS Latches 
+;-------------------------HPWM SET 250hz----------------------------------------
+;DEFINE CONFIG1  %0010011111110;
+RC5PPS = %00001100;  SETTING CCP1 AS AN OUTPUT AND ENABLE IT
+CCP1CON = %10001100; PWM mode selection and CCPx enabled
+PR2 = %11111101;     Value obtained from equation
+T2CON = %11000000;   Enabling timer 2
+CCPTMRS = %11111100; CCP1 IS BASED OFF TIMER 2
+CCPR1L = %11110100;  Value obtained from equation
+CCPR1H =%00000001;   Value obtained from equation            
+D VAR word: MATRIX VAR BYTE : MATRIX1 VAR BYTE;  Declaring variables type byte
+PORTA=0:PORTB=0:PORTC=0;                 Clearing PORTS
+D = 0;                                   Clearing Digit variable
+GOSUB Digit;                             Go to subrutine Digit
+START:;                                  START label
+TMR1L = 0;                               Clearing the first byte of TMR1 
+TMR1H = 0;                               Clearing the second byte of TMR1
+T1CON = %10000101;                       Eneable timer1
+SAME:;                                   SAME label
+IF PORTA.5=0 THEN SAME;                  If RA4 is Low go to SAME
+D.byte0 = TMR1L;                         Take the first byte of the variable
+D.BYTE1 = TMR1H;                         Take the second byte of the variable
+pause 150;                               Pause of 150ms
+GOSUB Digit;                             Go to subrutine Digit
+IF d >= 100 THEN GOTO start;             Clear al the variables if the count reaches 100
+GOTO SAME;                               Go to SAME label
+
+;------------------------Digit 1 Matrix-----------------------------------------          
+Digit:LOOKUP D dig 0,[$3F,$06,$5B,$4F,$66,$6D,$7D,$07,$7F,$6F],MATRIX;   Number selection of Digit 1 on BCD
+PORTC.0 = MATRIX.0;                      Segment A
+PORTC.1 = MATRIX.1;                      Segment B
+PORTC.2 = MATRIX.2;                      Segment C
+PORTC.3 = MATRIX.3;                      Segment D
+PORTC.4 = MATRIX.4;                      Segment E
+PORTC.6 = MATRIX.5;                      Segment F
+PORTC.7 = MATRIX.6;                      Segment G
+
+;------------------------Digit 2 Matrix-----------------------------------------
+LOOKUP D dig 1,[$3F,$06,$5B,$4F,$66,$6D,$7D,$07,$7F,$6F],MATRIX1;   Number selection of Digit 2 on BCD
+PORTA.0 = MATRIX1.0;                     Segment A
+PORTA.1 = MATRIX1.1;                     Segment B
+PORTA.2 = MATRIX1.2;                     Segment C
+PORTB.4 = MATRIX1.3;                     Segment D
+PORTB.5 = MATRIX1.4;                     Segment E
+PORTB.6 = MATRIX1.5;                     Segment F
+PORTB.7 = MATRIX1.6;                     Segment G
+PAUSE 50;                                Pause for 50 mS
+RETURN;                                  Return value to Digit
+END;                                     End of the algorithm

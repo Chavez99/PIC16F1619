@@ -1,0 +1,172 @@
+'*********************************************************************
+'*  Name    : Practice #6. Designin an Industrial Programmable Timer *
+'*  Author  : Arturo Alejandro Chavez Murga                          *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali             *
+'*          : All Rights Reserved                                    *
+'*  Date    : 20/03/2020                                             *
+'*  Version : 1.5                                                    * 
+'*  Notes   :                                                        * 
+'*          :                                                        *
+'*********************************************************************
+TRISA = %11111111;            Digital inputs in PORTA
+TRISB = %11100000;            Digital outputs in PORTB
+TRISC = %00001011;            RC0 & RC3 are digital inputs
+OSCCON =%01100101: OSCTUNE=0; 4MHz internal Oscillator 
+ANSELA = %11111111;           PORTA ANALOG ANO-AN7 
+ANSELB = 0;                   Analog PORTB is disabled 
+PORTC = %11100000;            RC5-7 = H RELAYS off
+ADRESL=0: ADRESH=0;           Clearing A/D registers 
+PORTB = 0;                    Clearing Port B 
+OPTION_REG=%01101000;         Enables TMRO for external pulses 
+WPUB=%11100000;               Enables PULL-UP RESISTORS ON RB7,6,5 
+T1CON=$46;                    DISABLE TIMER1, $47 ENABLES  
+S VAR BYTE: M VAR BYTE: H VAR BYTE;
+MT VAR BYTE;                  VARIABLE maintenance records 
+HT VAR BYTE: EEM VAR BYTE: EEH VAR BYTE;
+TENS var byte: UNITS var byte: DECIMALS var byte: CENTS var byte
+;**********************LCD SET UP****************************
+DEFINE LCD_DREG PORTB;
+DEFINE LCD_DBIT0; 
+DEFINE LCD_RSREG PORTB; 
+DEFINE LCD_RS BIT 4; 
+DEFINE LCD_EREG PORTC; 
+DEFINE LCD_EBIT 4;
+DEFINE LCD_BITS 4; 
+DEFINE LCD_LINES 4; 
+HT=167; 
+MT=0; 
+writeCODE 5,MT;                    Store MT as cero to initialize cero maintenance
+STRT: H=0;                         ESTO SE PONDRA 167+1 QUE SE SUMA ABAJO SE LOGRA LOS 7 DIAS
+;*******************READING HEF MEMORY**********************
+readcode 6,EEH; 
+readcode 7, EEM 
+readcode 5, mt;
+;*********************INITIAL MESSAGE**********************
+LCDOUT $FE,1,"TIMER";
+LCDOUT $FE, $C0, "CLOCK"; 
+pause 1500; 
+LCDOUT $FE,1,"INITIAL"; 
+LCDOUT $FE, $C0,"SETUP";
+pause 1500; 
+LCDOUT $FE, 1,"ONE"; 
+LCDOUT $FE, $C0,"WEEK"; 
+pause 1500;
+;********************METHOD TO SET UP THE TOTAL HOURS TIME*************
+STH: HT= HT+1; 
+LCDOUT $FE,1,DEC HT, " : ", DEC M," : ", dec S; 
+LCDOUT $FE,$C0,"SET HRS"; 
+PAUSE 350;
+IF HT>255 THEN STRT; Start again 
+IF PORTB.6= 0 THEN STH;
+;******************SYSTEM STARTS WITH BOTH RELAYS TURNED OFF***********
+RPT: PORTC.5= 1; 
+PORTC.6= 1;
+PAUSE 50; 
+LCDOUT $FE,1, "STARTING";
+LCDOUT $FE, $C0,"CYCLE";
+PAUSE 2000; 
+IF PORTB.6= 1 THEN RPT;           Waiting for start switch;                                                                                                                  
+;****************READING AN HEF ADDRESS***********************
+readcode 6, EEH;
+readcode 7, EEM;
+readcode 5, MT;
+LCDOUT $FE, 1, "H=", DEC EEH;       IMPRESIONES SOLO DE PRUEBA 
+LCDOUT $FE, $C0, "M=", DEC EEM;     IMPRESIONES SOLO DE PRUEBA 
+pause 3000;
+;********************* IT VERIFIES ITS STATUS OF WICH ONE IS STARTING THE SYSTEM*************** 
+IF ((EEH>=254)AND(EEM>=254)) THEN GOTO RP;  
+;****************** IT VERIFIES IT IS NOT A BLACKOUT, FIRST START OF THE SYSTEM****************
+;*******************DISPLAY THIS MESSAGE WHEN THERE IS A BLACKOUT WHILE DOING THE PROCESS*************
+LCDOUT $FE, 1, "TURNED":
+LCDOUT $FE, $C0, "OFF"; 
+pause 1000;
+LCDOUT $FE, 1, "BEFORE"; 
+LCDOUT $FE, $C0, "THE"; 
+pause 1000;
+LCDOUT $FE,1, "FULL";
+LCDOUT $FE, $C0, "CYCLE!!";
+pause 1000; 
+LCDOUT $FE,1, "CONTINUE";
+LCDOUT $FE, $C0, "CYCLE"; 
+pause 1000;
+GOTO SHUTDOWN;
+RP: H=0;
+M2: M=0: MT=0; 
+GOTO CONTINUE;
+SHUTDOWN:   readcode 6,H; 
+            readcode 7,M;
+            readcode 5,MT; 
+            LCDOUT $FE, 1, "H", DEC H,"M",DEC M;
+            LCDOUT $FE, $C0,"HT", DEC HT,"MT",dec Mt; 
+            PAUSE 5000;
+CONTINUE:
+HPWM 1, 127, 25000;               250 Hz TIME BASE CLOCK
+TMR0= 0; 
+PORTC.5=0;                        TURN ON RELAY ON RCS-PIN 16
+PORTC.6=1;                        TURN OFF RELAY PIN17
+SEC:    FOR S=0 TO 59; 
+        LCDOUT $FE,1, DEC H,":",DEC M,":", DEC S; 
+        LCDOUT $FE,$C0,"HT=",DEC HT; 
+        LCDOUT $FE,$C0,"Timer",DEC TENS, DEC units, dec decimals,".",DEC CENTS," *F";
+STAY:   IF TMR0 <250 THEN STAY;   One second pause 
+        TMR0= 0; 
+        IF PORTB.6= 0 THEN SETH:
+        IF PORTB.5= 0 THEN SETM; 
+        NEXT S;                  SECONDS LOOP 
+;******************WHEN THE PROGRAMMED CYCLED ENDS EVERY MINUTE, MIS INCREMENTED**************** 
+        writecode 7,M; 
+        writecode 6,H; 
+        M= M+1; 
+        IF M<60 THEN SEC;
+        M= 0; 
+        H=H+1; 
+        IF H<HT THEN SEC; 
+;*********************DE-IONIZATION TIME TURN ON RELAY 2*******************
+PORTC.5= 1;              TURN OFF RELAY 1
+PORTC.6= 0;              TURN ON RELAY2
+PAUSE 2500;              wait 2.5 seconds
+LCDOUT $FE,1,"CLEAN";    MUESTRA EN PANTALLA EL STATUS 
+LCDOUT $FE, $C0, "BLOWER":
+;*****************CLEARING VARIABLES TO ZERO FOR A RELIABLE OPERATION****************
+EEH=0;
+EEM=0; 
+H=0: M=0: S=0;
+MT=MT+1;                Increment the number of maintenances
+writecode 6,EEH;        Save each variable on address 0, 1, 2 
+writecode 7,EEM; 
+writecode 5,MT; 
+;******************STARTS CLOCK IN REST MODE***************** 
+SSC:                    ;Counting seconds when system is at resta
+    FOR S=0 TO 59; 
+    LCDOUT $FE,1,DEC H,":", DEC M,":",DEC S," Mins"; 85 us 
+    LCDOUT $FE, $C0,"HT=",DEC HT 
+STY:    IF TMR0 < 250 THEN STY;     One second pause 
+        TMR0=0; 
+        IF PORTB.6= 0 THEN SETH;    Verify if user is pressing a button
+        IF PORTB.5= 0 THEN SETM;
+        NEXT S;                     Seconds loop 
+        M=M+1; 
+        IF M<1 THEN SSC;            Minutes loop 
+        EEH=0; 
+        EEM=0; 
+        H=0: M=0: S=0;
+;*********************ONCE THEY ARE INIALIZED THEIR ARE WRITTEN ON THE MEMORY OF THE PIC******************
+writecode 6,EEH; 
+writecode 7,EEM; 
+writecode 5, MT;
+GOTO CONTINUE;
+;********************START A NEW PROCESS SETTING THE HOURS REQUIRES TO START THE SYSTEM*****************
+SETH:   HT=HT+1;
+        LCDOUT $FE,1,DEC HT,":", DEC M, ":", DEC S; 
+        LCDOUT $FE, $C0, "SET HRS";
+        PAUSE 350; 
+        IF HT>255 THEN RP; 
+        IF PORTB.6= 0 THEN SETH;
+        GOTO SEC;
+;*********************ABOUT PROGRAMMED HOURS AND MAINTENANCE HOURS**********************
+SETM:   LCDOUT $FE, 1, "HT: ",DEC HT;
+        LCDOUT $FE, $C0,"MT",dec MT;
+        PAUSE 250; 
+        IF PORTB.5= 0 THEN SETM; 
+        GOTO SEC;
+END;                                    End of the algorithm

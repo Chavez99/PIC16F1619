@@ -1,0 +1,310 @@
+
+'****************************************************************
+'*  Name    : CLOCK WHIT WITH ONE BUTTON AND TEMPERATURE        *
+'*  Author  : LEE ALVAREZ ROSADO                                *
+'*  Notice  : Copyright (c) 2019 ITM                            *
+'*          : All Rights Reserved                               *
+'*  Date    : 4/06/2019                                         *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+I VAR BYTE:S VAR BYTE:DIGIT var byte:PATTERN VAR BYTE: D3 VAR BYTE;
+D2 VAR BYTE: D1 VAR BYTE: D0 VAR BYTE: M VAR BYTE: H VAR BYTE;
+X VAR BYTE: Z VAR BYTE:VOLT VAR WORD:T100 VAR BYTE:T10 VAR BYTE:T1 VAR BYTE;
+IN  VAR WORD: OUT VAR WORD: Y VAR BYTE:CLOCK VAR WORD:C VAR WORD:SG VAR BYTE;
+CALC0 VAR WORD:CALC1 VAR WORD;
+TRISA =%10011111; RA0:RA4,ra7 SET AS INPUT, RA5:RA6 SET AS OUTPUT
+TRISB =%00000000; RB0:RB6 SET AS OUTPUT, RB7 SET AS INPUT
+TRISC =%00000001; RC0 SET AS INPUT, RC1:RC7 SET AS INPUT
+ANSEL = %00011010;      RA1,RA3,RA4 SET AS ANALOG, RA0,RA2,RA5:RA7 DIGITAL
+ANSELH=0;         PORTB SET AS DIGITAL
+OSCCON =%01101100;SET 4MHZ EXTERNAL OSC 
+;FOSC.2 = 1 ;
+;DEFINE FOSC  %001
+;CONFIGURATION_WORDS_FOSC = %001
+;_CONFIG1_XT_OSC
+HPWM 1,127,250;   OUTPUT PWM TO 250 HZ WITH 50% IN STATE HIGH
+OSCTUNE = 0;      CLOCK WORKING WITH FACTORY CALIBRATION
+T1CON= $07;       TMR1 ENEABLE AND COUNT IN STATE LOW
+M=0;
+H=0;
+D0=0;              ;INICIAL CONDITION
+D1=0;
+D2=0;
+D3=0;  
+SG = 0;
+PORTA = 0;
+PORTB= 0;
+PORTC=0;
+TMR1L = 0;
+TMR1H = 0;
+TMR1 = 0;
+TMR0 = 0;
+
+;OPTION_REG.7=0; PORTB PULL UP ENEABLE
+ADCON0 = %00001111; AN3 ENEABLE-FOSC/2
+ADCON1 = %10000000; RIGHT JUSTIFIED
+OPTION_REG = %00101000; ENEABLE TIMER 0
+
+;-------------------------------------------------------------------------------
+;RPT:                 ;RESTART
+;pause 50;                 ;STOP FOR 50 MILISECOND
+;TMR1 = 0;
+SEC:                      ;LABEL SEC
+PORTA.3=0;                SET A LED OFF
+PORTA.4=0;                SET A LEDM OF
+PORTA.5=0;                SET A LEDH OFF
+T1CON.0=1;                ENEABLE TMR1
+
+GOSUB SHOW            ;GO TO LABEL SHOW
+GOSUB SHOWMINUTES;     GO TO LABEL SHOWMINUTES
+GOSUB DOTS;            GO TO LABEL DOTS
+GOSUB SHOWHOURS;       GO TO LABEL SHOWHOURS
+
+FOR S = 0 TO 29;                START THE TIME OF TIME DISPLAY
+STAY:                     ;LABEL STAY
+IF PORTA.0 = 0 THEN GOTO SET;      ;STARTING SET TIME
+
+GOSUB TIME;            GO TO LABEL TIME
+GOSUB SHOW            ;GO TO LABEL SHOW
+GOSUB SHOWMINUTES;     GO TO LABEL SHOWMINUTES
+GOSUB DOTS;            GO TO LABEL DOTS
+GOSUB SHOWHOURS;       GO TO LABEL SHOWHOURS
+IF TMR0 < 250 THEN STAY   ;PAUSE 1 SECOND
+GOSUB TIME;             GO TO LABEL TIME
+TMR0 = 0;                  ;CLEAR TMR0
+GOSUB SHOW            ;GO TO LABEL SHOW
+GOSUB SHOWMINUTES;     GO TO LABEL SHOWMINUTES
+GOSUB DOTS;            GO TO LABEL SHOWHOURS
+GOSUB SHOWHOURS;
+NEXT S;                    ;NEXT LOOP
+
+FOR S = 0 TO 9;           START THE TIME OF TEMPERATURE DISPLAY
+IF PORTA.0 = 0 THEN GOTO SET;  ;STARTING SET TIME
+GOSUB TEMPERATURE;               GO TO LABEL TEMPERATURE
+STAY2:;                          LABEL STAY
+IF PORTA.0 = 0 THEN GOTO SET;   ;STARTING SET TIME
+GOSUB SHOWTEMP;                  GO TO LABEL SHOWTEMO
+IF TMR0 < 250 THEN STAY2   ;PAUSE 1 SECOND
+TMR0 = 0;                  CLEAR TMR0
+next s;                    NEXT LOOP
+GOSUB TIMERETURN;          GO TO LABEL TIMERETURN
+GOTO SEC;                  GO TO LABEL SEC
+
+;-------------------------------------------------------------------------------
+
+;-------------------------------SET TIME----------------------------------------
+SET:     
+PAUSE 200;                       ;START SET MINUTES
+TMR1 = 0;
+for x = 0 to 2; WAIT FOR 3 SECONDS TO CONTINUE
+TMR1 = 0;                 
+        MINU:
+        PORTC.6 = 0; OFF HOUR DISPLAY
+        PORTC.7 = 0; OFF HOUR DISPLAY
+        PORTC.3 = 0; OFF DOTS
+        GOSUB SHOW;                  GO TO LABEL SHOW
+        GOSUB SHOWMINUTES;           GO TO LABEL SHOWMINUTES
+        IF PORTA.0 = 0 THEN
+        M = M + 1;
+        X = 0;             RESTART FOR X
+        TMR1 = 0;          RESTART TMR1
+        IF (M>59) THEN M = 0;
+        FOR Z = 0 TO 25;    DEBOUNCING: (SHOW + SHOWMINUTES) = 2 mS *26 = 52 mS
+        GOSUB SHOW;                GO TO LABEL SHOW
+        GOSUB SHOWMINUTES;         GO TO LABEL SHOWMINUTES
+        NEXT Z;                    NEXT LOOP
+        ENDIF;              END IF;
+          
+        IF (TMR1 < 250) THEN MINU; IF TMR1 IS LOW TO 250 DO NOT ADVANCES      
+     PAUSE 200;        PAUSE 200 mS
+NEXT X; NEXT LOOP
+;------------------------------------------------------------------------------
+TMR1 = 0;
+for x = 0 to 2          ; SET HOURS ;WAIT FOR 3 SECONDS TO CONTINUE                    
+TMR1 = 0 
+        HOUR:
+        PORTC.5 = 0; OFF MINUTES DISPLAY
+        PORTC.4 = 0; OFF MINUTES DISPLAY
+        PORTC.3 = 0;OFF DOTS
+        GOSUB SHOW;          GOTO LABEL SHOW
+        GOSUB SHOWHOURS;     GOTO LABEL SHOWHOURS
+        IF PORTA.0 = 0 THEN;  IF PORTA.0 IS EQUAL TO 0 CONTINUE
+
+        H = H + 1;             HOUR + 1
+         IF (H>23) THEN H = 0; RESTART HOURS
+        FOR Z = 0 TO 25;   DEBOUNCING: (SHOW + SHOWHOURS) = 2 mS *26 = 52 mS
+        GOSUB SHOW;        GOTO LABEL SHOW
+        GOSUB SHOWHOURS;   GOTO LABEL SHOWHOURS
+        NEXT Z;            NEXT LOOP
+        X = 0;             RESTART FOR X
+        TMR1 = 0;          RESTART TMR1
+        ENDIF;             END IF
+         
+        IF (TMR1 < 250) THEN HOUR; IF TMR1 IS LOW TO 250 DO NOT ADVANCES           
+    PAUSE 200; PAUSE 200 mS
+NEXT X;  NEXT LOOP
+
+GOTO SEC; GO TO LABEL RPT
+;--------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
+SHOW: 
+D0= M DIG 0;         GETTING DIGIT OF UNITS 
+D1= M DIG 1;         GETTING DIGIT OF TENS
+D2= H DIG 0;         GETTING DIGIT OF UNITS
+D3= H DIG 1;         GETTING DIGIT OF TENS
+RETURN;
+
+SHOWHOURS:
+PORTC.4=1                      ;TURN ON CATODE OF FIRST DIGIT
+DIGIT =D3;                     ;SAVE D3 IN DIGIT VARIABLE 
+GOSUB BCD7;                    ;GO TO LABEL BCD7
+PORTC.4=0;                     ;TURN OFF CATODE OF FIRST DIGIT 
+PORTC.5=1;                     ;TURN ON CATODE OF SECOND DIGIT
+DIGIT= D2;                     ;SAVE D2 IN DIGIT VARIABLE
+GOSUB BCD7;                    ;GO TO LABEL BCD7
+PORTC.5=0;                     ;TURN OFF CATODE OF SECOND DIGIT
+RETURN;
+
+
+DOTS:
+PORTB = 0;
+IF(TMR1 > 125) THEN            ;TURN ON FOR 500 MILISECONDS
+PORTB = 0;
+PAUSEUS 100;
+PORTC.3=1                      ;TURN ON CATODE OF L1,L2,L3
+PORTB= %00000011               ;TURN ON RB0:RB1 
+PAUSE 1;                       ;PAUSE 1 MICROSECOND
+PORTC.3=0;                     ;TURN OFF CATODE OF L1,L2,L3
+ELSE                           ;IF NOT THEN
+PAUSE 1;                       ;PAUSE 1 MICROSECOND
+ENDIF;                         ;IF IS FINISHED 
+RETURN;
+
+SHOWMINUTES:
+
+PORTC.6=1;                     ;TURN ON CATODE OF THIRD DIGIT
+DIGIT= D1;                     ;SAVE D1 IN DIGIT VARIABLE
+GOSUB BCD7;                    ;GO TO LABER BCD7
+PORTC.6=0;                     ;TURN OFF CATODE OF THIRD DIGIT
+PORTC.7=1;                     ;TURN ON CATODE OF QUARTER DIGIT
+DIGIT= D0;                     ;SAVE D0 IN DIGIT VARIABLE
+GOSUB BCD7;                    ;GOTO BCD7
+PORTC.7=0;                     ;TURN OF CATODE OF QUARTER DIGIT
+RETURN;                        ;GO TO THE CALL UPON
+
+;-------------------------------------------------------------------------------
+BCD7:
+PORTB = 0;
+;PAUSEUS 100;
+LOOKUP DIGIT,[$40,$79,$A4,$B0,$99,$92,_  ;DECODING DIGIT TO BCD
+$82,$F8,$80,$90],PATTERN;                ;SAVE VARIABLE ON PATTERN     
+PORTB= ~PATTERN;         ;DENY VARIABLE PATTERN AND SAMPLE IN PORTB                                               
+PORTB.7 = 0;              DOT OF
+PAUSE 1;                 ;PAUSA DE 1 MICROSEGUNDO
+RETURN;                  GO TO THE CALL UPON
+;-------------------TIME--------------------------------------------------------
+TIME:
+
+IF TMR1 < 250 THEN RETURN;         RETURN IF TMR1 IS LESS OF 250
+TMR1 = 0;                          CLEAR TMR1
+SG = SG + 1;                       A SECOND MORE
+
+IF SG > 59 THEN;                   LIMIT THE SECOND TO 59
+SG = 0;                            CLEAR SECONDS
+M = M + 1;                         A MINUTE MORE
+ENDIF;
+IF M > 59 THEN;                   LIMIT THE MINUTES TO 59
+M = 0;                             CLEAR MINUTES
+H = H + 1;                         A HOUR MORE
+ENDIF;
+IF H > 23 THEN;                  LIMIT THE HOURS TO 23
+H = 0;                            CLEAR HOURS
+ENDIF;
+RETURN;                           GO TO THE CALL UPON
+;---------------------------TEMPERATURE-----------------------------------------
+TEMPERATURE:
+TMR0 = 0;                                 CLEAR TMR0
+ADCIN 3,VOLT;
+STY: IF ADCON1.1 =1 THEN STY;        WAITING FOR READING TO END
+;VOLT  =  (ADRESH*1250) + ADRESL*5; 5mV BIT;
+
+calc0 = ADRESH*1250;
+CALC1 = ADRESL*5;
+VOLT = CALC0 + CALC1;   VOLT = 5025 MAX
+;FOR X = 0 TO 3;
+T100 = VOLT DIG 3;       GETTING UNITS
+T10 = VOLT DIG 2;        GETTING DECIMALS
+T1 = VOLT DIG 1;         GETTING CENTURY
+;NEXT X;
+RETURN;
+;------------------------------
+SHOWTEMP:
+;TMR0 = 0;
+TEM:
+PORTC.4=1                      ;TURN ON CATODE OF FIRST DIGIT
+DIGIT = T100;                     ;SAVE T100 IN DIGIT VARIABLE 
+GOSUB BCD7;                    ;GO TO LABEL BCD7
+PORTC.4=0;                     ;TURN OFF CATODE OF FIRST DIGIT 
+PORTC.5=1;                     ;TURN ON CATODE OF SECOND DIGIT
+DIGIT= T10;                     ;SAVE T10 IN DIGIT VARIABLE
+GOSUB BCD7;                    ;GO TO LABEL BCD7
+PORTC.5=0;                     ;TURN OFF CATODE OF SECOND DIGIT
+PORTC.6=1;                     ;TURN ON CATODE OF THIRD DIGIT
+DIGIT= T1;                     ;SAVE T1 IN DIGIT VARIABLE
+;PORTB.7 = 1;
+GOSUB BCD7;                    ;GO TO LABER BCD7
+PORTC.6=0;                     ;TURN OFF CATODE OF THIRD DIGIT
+PORTB = 0;
+PORTC.3 = 1;                    TURN ON CATODE OF L1,L2,L3
+PORTB.2=1;                      TURN ON C,L3;
+PAUSE 1;
+PORTC.3 = 0;                    TURN OF CATODE OF L1,L2,L3
+PORTB.2 = 0;                     CLEAR PORTB
+PORTC.7=1;                     ;TURN ON CATODE OF QUARTER DIGIT
+;DIGIT= D0;                     ;SAVE D0 IN DIGIT VARIABLE
+PORTB = 0;
+PORTB = %00111001; LETTER C
+PAUSE 1;
+;GOSUB BCD7;                    ;GOTO BCD7
+PORTC.7=0;                     ;TURN OF CATODE OF QUARTER DIGIT
+;if TMR0 < 250 THEN TEM;
+;TMR0 = 0;
+;NEXT Y;
+
+RETURN;                        ;GO TO THE CALL UPON
+;-------------------------------------------------------------------------------
+TIMERETURN:
+CLOCK  = (TMR1H*256) + TMR1L;   SAVE TIMER 1 IN VARIABLE CLOCK
+C = CLOCK/250;                  HOW MANY TIMES IS 1 SECOND
+FOR X=1 TO C;                   START COUNTING
+SG = SG + 1;                    A SECOND MORE
+IF SG > 59 THEN;                LIMIT THE SECOND TO 59
+SG = 0;                         CLEAR SECONDS
+M = M + 1;                      A MINUTE MORE
+ENDIF;                          
+IF M > 59 THEN;                 LIMIT THE MINUTES TO 59
+M = 0;                          CLEAR MINUTES
+H= H+1;                         A HOUR MORE
+ENDIF;
+IF H > 23 THEN;                 LIMIT THE HOURS TO 23
+H = 0;                          CLEAR HOURS
+ENDIF;
+NEXT X;                         NEXT LOOP
+CLOCK = CLOCK - (C*250);        REMAINING CYCLES
+TMR1 = CLOCK;                   REMAINING CYCLES
+GOTO SEC;                       GO TO LABEL SEC;
+;-------------------------------------------------------------------------------
+BCD7DOT:
+PORTB = 0;
+;PAUSEUS 100;
+LOOKUP DIGIT,[$40,$79,$A4,$B0,$99,$92,_  ;DECODING DIGIT TO BCD
+$82,$F8,$80,$90],PATTERN;                ;SAVE VARIABLE ON PATTERN     
+PORTB= ~PATTERN;         ;DENY VARIABLE PATTERN AND SAMPLE IN PORTB                                               
+PORTB.7 = 1;
+PAUSE 1;                 ;PAUSA DE 1 MICROSEGUNDO
+RETURN;                  GO TO THE CALL UPON
+;-------------------------------------------------------------------------------
+END
+

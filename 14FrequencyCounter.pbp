@@ -1,0 +1,49 @@
+'****************************************************************
+'*  Name    : Practice 14                                      *
+'*  Author  : Arturo Daniel Mora Soto                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 4/20/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+ASM__CONFIG_FOSC_HS;
+TRISA=%11111100;             RA0:RA1 are set outputs & RA2:RA7 are set inputs
+TRISB=%00000000;             PORTB is set output
+TRISC=%00100000;             RC5 is input
+OSCCON=%01101000;            Internal oscillator is set to 4.000 MHz
+OSCTUNE=0;                   Oscillator module is running at the factory-calibrated frequency.
+ANSELA=0;                    PORTA is set Digital
+ANSELB=0;                    PORTB is set Digital
+ANSELC=0;                    PORTC is set Digital
+PORTB=0;                     Clearing PORTB
+LATA=0:LATB=0:LATC=0;        Clearing latches
+CNT1 VAR BYTE:CNT2 VAR WORD:CTOT VAR WORD; Declaring variable types
+DEFINE LCD_DREG PORTC;      Define PORTC set for data transmission
+DEFINE LCD_DBIT 0;          Define 0 as the beggining of data
+DEFINE RSREG PORTA;         Read Strobe bit set on PORTA
+DEFINE LCD_RSBIT 0;         Bit 0 is Read Strobe  
+DEFINE LCD_EREG PORTA;      Set Enable bit on PORTA
+DEFINE LCD_EBIT 1;          Bit 1 is the Enable bit
+DEFINE LCD_BITS 4;          4 data bits for transmission
+DEFINE LCD_LINES 2;         LCD set to two lines
+CM2CON1.1=0;                Zero along with T1CON to make XOR=0
+RPT:PORTB=0;                Clearing PORTB
+LCDOUT $FE,1,"Frequency Counter";
+LCDOUT $FE,$C0,"1-Hz Resolution";
+PAUSE 2000;
+;SETUP TIMER1 REGISTERS,        Maximum Frequency is 65,535Hz
+FREQ:PORTB=0;                   Clearing PORTB
+     CTOT=0:CNT1=0:CNT2=0;      Clearing variables
+     TMR3L=0:TMR3H=0;           Clearing timer1 bytes
+     T3CON=%10000101;           Enable counter T13ON bit0=1,$07 for new PICs
+     PAUSE 1000;                Read frequency for 1.000 seconds
+     T3CON=%10000100;           Disable counter T3CON bit0=0,$06 for new PICs
+     CNT1=TMR3L;                Transfer low-byte count to CNT1
+     CNT2=TMR3H*256;            Transfer high-byte count to CNT2
+     CTOT=CNT1+CNT2;            Get total reading from both bytes
+  LCDOUT $FE,1,"FREQ";          Message on first row
+  LCDOUT $FE,$C0,DEC CTOT,"Hz"; Frequency reading on 2nd row provides Decimal value of CTOT
+  goto FREQ;                    Go to label FREQ to start a new reading
+END

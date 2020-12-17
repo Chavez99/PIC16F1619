@@ -1,0 +1,33 @@
+'****************************************************************
+'*  Name    : Programmable Traffic Controller with PIC16F1619   *
+'*  Practice: 3.                                                *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020                                *
+'*          : All Rights Reserved                               *
+'*  Date    : 2/25/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   : Original                                          *
+'*          :                                                   *
+'****************************************************************
+TRISA=%11111111;                PORTA set as input
+ANSELA=%00000000;               PORTA set to digital
+TRISB=%11111111;                PORTB set as input
+ANSELB=0;                       PORTB set to digital
+TRISC=%00000000;                PORTC set as output
+ANSELC=0;                       PORTC set to digital
+OSCTUNE=0 : OSCCON= $6A;
+
+RPT : PORTC=0;                  Clearing PORTS
+     pause 50;                  Stop 50 mS
+     PORTC=%00100100;           Turn on RC2 and RC5, both reds on
+     pause 3000;                Pause for 3 seconds
+     PORTC=%00100001;           Turn on RC0 and RC5, turn on red and green
+     pause 10000;               Pause for 10 seconds
+     PORTC=%00100010;           Turn on RC1 and RC5, turn on red and yellow
+     pause 4000;                Pause for 4 seconds
+     PORTC=%00001100;           Turn on RC2 and RC3, turn on green and red
+     pause 8000;                Pause for 8 seconds
+     PORTC=%00010100;           Turn on RC2 and RC4  turn on yellow and red
+     pause 4000;                Pause for 4 seconds
+goto RPT;
+end

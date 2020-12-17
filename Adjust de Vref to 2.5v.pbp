@@ -1,0 +1,44 @@
+'****************************************************************
+'*  Name    : Practice #4.1. Adjust the Vref to 2.5V            *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/5/2020                                          *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+
+ASM__CONFIG_MCLRE_OFF
+TRISA =  %00000011;           Set as inputs RA0:1
+ANSELA = %00000011;           Set as analog RA0:1
+TRISB = %11110000;            Set as inputs RB4:7
+ANSELB = %00000000;           Set as digital PORTB
+TRISC = %00000000;            Set as output PORTC
+ANSELC = %00000000;           Set as digital PORTC
+OPTION_REG.7=1;               Set on all Weak pull-ups
+ADCON1=%10000010;             Right justified and set on the Vref
+WPUB=%11110000;               Set on the last 4 Weak pull-ups
+CM1CON0=7;                    It defines that the comparator is synchronous with hysteresis and with normal power at higher speed.
+OSCCON = $6A;                 Internal Oscillator is set to 4MHz
+OSCTUNE = 0;                  Oscillator module is running at the factory-calibrated frequency.
+LATA=0:LATB=0:LATC=0;         Clear all latches
+WPUA=0:WPUC=0;                Set off weak pull-ups of PORTA & PORTC
+PAUSE 10;                     Pause of 10ms
+DEFINE adc_bits 10;           A/D converter set to 10 bit resolution
+define adc_clock 3;           Enable the A/D internal clock
+define adc_sampleUs 50;       Set a time lecture of 50ms
+PORTA=0:PORTB=0:PORTC=0;      Clearing all PORTS
+ADRESL=0:ADRESH=0;            Clearing the hole adress
+V1 VAR WORD   ;               Declaring V1 as a word variable  
+
+RPT:
+    adcin 0,V1;               It stores the contents of V1 to AN0
+    PORTC=0   ;               Clear the PORTC
+    PORTC=ADRESL;             It stores the contents of ADRESL to PORTC
+    PORTA=ADRESH<<4;          It stores the contents of ADRESH shifted 4 positions to the left to PORTA
+    PAUSE 100;                Pause of 100 ms
+  GOTO RPT;                   Back to RPT
+END;                          End of the algorithm
+
+

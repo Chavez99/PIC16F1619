@@ -1,0 +1,300 @@
+'****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 12/08/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+; TRANSMITTER PIC16F1619  
+#CONFIG  
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+
+  
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+
+  
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+#ENDCONFIG
+DEFINE OSC 16;
+OSCCON = %01111010; intenal Osc set to 16 MHZ
+OSCTUNE = 0
+OSCSTAT = %00011111;
+TRISA = %00111110; RA0 AS A OUTPUTS, RA1:RA2:RA3:RA4:RA5 AS A INPUTS
+ANSELA = %000100; RA0:RA1:RA4:RA5 AS DIGITAL,RA2:RA3 AS ANALOG,
+TRISC = %100000;RC0:RC1:RC2:RC3:RC4 AS OUTPUTS, RC5 AS INPUTS 
+TRISC=0;  Clearing PORTC
+TRISB = 0; Clearing PORTB
+ANSELB = 0; PORTB set as digital
+;PPSLOCK=0;
+;ANSEL PULL-UP resistors disabled
+WPUA = 0; AC = 0; 
+WPUC = 0;             PULL-UPS DISABLED
+OPTION_REG.7 = 0; PULL-UPS ENABLED
+WPUA.3 = 1; PULL-UP IN RA3 ENABLED
+T1CON = %10000101; TMR1 ENABLED
+ADCON0 = %00001111;AN3 IS ENABLED
+ADCON1 = %10000000; FOSC/2, VDD
+;---------------------------------
+DEFINE HSER_RCSTA 90h; RX MODULE IS ENABLED
+DEFINE HSER_TXSTA 20h; TX MODULE IS ENABLED
+DEFINE HSER_BAUD 2400; BAUD RATE IS 2400
+rc1sta.7 = 1; SERIAL COMUNICATION IS ENABLED
+RB7PPS = %10010;
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC ' PORTC is LCD data port
+DEFINE LCD_DBIT 0 ' PORTC.0 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;;-----------------------------------------------------
+LCDOUT $FE,$28;  $28 FUNCTION SET, 4 BITS
+LCDOUT $FE,$10;  $10 SHIFT DISPLAY
+LCDOUT $FE,$0C;  $0C DISPLAY ON
+LCDOUT $FE,$06;  $06 ENTRY MODE SET
+;-----------------------------------------
+;CREATING ALIAS
+;TX VAR PORTC.0;;
+PB VAR PORTA.3
+;----
+;---VARIABLES
+X VAR byte[4];
+Y VAR WORD;
+VIN VAR WORD;
+VINBCD var word 
+H VAR BYTE[5];
+TMR VAR WORD;
+VD var byte[4];
+A VAR BIT
+IN var byte;
+OUT VAR BYTE;
+;--------
+A = 1
+for x = 0 to 5
+vd[x] = "0";
+h[x] = "0";
+next x
+;send a message to the LCD
+LCDOUT $FE,$80,"FREQUENCY METER-";
+LCDOUT $FE,$C0,"--VOLTMETER RF--";
+PAUSE 2000;
+TMR = 0;
+T1CON.0 =0; T1CON input Frequency DISABLED
+MAIN
+LCDOUT $FE,$80,"FREQUENCY METER-";
+LCDOUT $FE,$C0,"--VOLTMETER RF--";       
+;---------
+IF PB = 0 THEN; wait for Push button to go Low
+PAUSE 150
+A = 0;                  CONTROL VARIABLE IS 0
+FOR X= 0 TO 3; 
+HSEROUT ["BZ0",10]; SEND ACTIVATION INSTRUCTION 
+NEXT X;
+ENDIF; 
+IF A = 0 THEN; START QUESTION FOR CONTROL variable
+LCDOUT $FE,$80,"      START         ";
+LCDOUT $FE,$C0,"       TX          ";
+PAUSE 1000;
+TMR1L = 0;CLEAR TIMER 
+TMR1H = 0;  
+T1CON.0 = 1;  ENABLES TIMER
+STAY:;
+T1CON.0=1;
+PAUSE 1000
+T1CON.0=0; TIMER DISABLED
+GOSUB ADC;
+GOSUB H_DEC;          GO TO h_DEC AND RETURN;
+GOSUB SHOW_LCD;  GO TO SHOW_LCD AND RETURN
+GOSUB SEND;           
+if pb = 0 then; wait for Push button to go high 
+A = 1;      CONTROL variable is 1, END TRANSMISSION
+PAUSE 200;
+ENDIF;  
+IF A = 0 THEN STAY; If CONTROL IS "0" GO TO STAY
+A = 1;;                         CONTROL VARIABLE IS "1"
+FOR X = 0 TO 2;
+GOSUB SEND
+NEXT X
+LCDOUT $FE,$80,"      END       ";
+LCDOUT $FE,$C0,"       TX       ";
+PAUSE 1000    
+ENDIF
+goto main; 
+ADC:;                 
+ADCON0.1 = 1;                  ENABLE ADC MODULE 
+HERE1: IF ADCON0.1 = 1 THEN HERE1;  CONVERSION in progress
+VIN.BYTE0 = ADRESL;     SAVE LOWER REGISTER OF THE ADC IN VARIABLE VIN
+VIN.BYTE1 = ADRESH;     SAVE HIGHER REGISTER OF THE ADC IN VARIABLE VIN
+disable;                               DISABLE INTERRUPTS
+VINBCD = VIN*4887;         MULTIPLYING BY RESLSB = 4.8887
+VIN = div32 1000;              PERFORM 16-BIT DIVISION
+enable;                               ENABLE INTERRUPTS
+FOR X = 0 TO 3;               START LOOP
+IN = VIN DIG X;                 GET DIGIT X
+LOOKUP IN,["0123456789ABCDEFG"],OUT;  DIGITS DECODING
+VD[X] = OUT;                    SAVE DECODED DIGITS              
+NEXT X; 
+return;
+SHOW_LCD:;   display LABEL on LCD
+LCDOUT $FE,$80,"HZ= ",H[4],H[3],H[2],H[1],H[0],"       ";
+LCDOUT $FE,$C0,"V= ",VD[3],".",VD[2],VD[1],VD[0],"        ";
+RETURN; 
+SEND:; LABEL SEND;
+HSEROUT ["BZ",DEC A,10];  
+HSEROUT ["AZ",VD[3],VD[2],VD[1],VD[0],10]; SEND SERIAL data
+HSEROUT ["CZ",H[4],H[3],H[2],H[1],H[0],10];
+RETURN; 
+H_DEC:; LABEL h_DEC;
+TMR.BYTE0 = TMR1L ; OBTAIN LOWER REGISTER OF TIMER1
+TMR.BYTE1 = TMR1H; OBTAIN HIGHER REGISTER OF TIMER1
+FOR X = 0 TO 4;    START LOOPS
+IN = TMR DIG X;            OBTAIN DIGITS
+LOOKUP IN,["0123456789"],OUT; DECODING DIGITS
+H[X] = OUT;  SAVE DIGITS
+NEXT X; NEXT LOOPS
+TMR1L = 0; CLEAR TIMER
+TMR1H = 0; 
+RETURN; 
+END; 
+
+Listing 2: Code for the PIC16F1614 Working as a RF Receiver
+;  PBP3 COMPILER from melabs.com
+; Authors: Ricardo Jimenez and Gabriel Lee Alvarez
+; © July 13, 2020
+; PIC16F1614 for the Receiver module
+;Include "modedefs.bas"; include library
+OSCCON = %01111010; 16 MHZ
+OSCTUNE = 0;
+OSCSTAT = %00011111;  PLL IS OFF,HFINTOSC AND MFINTOSC IS READY
+DEFINE OSC 16;          CLOCK SET TO 16MHZ
+TRISA = %0000000;     ALL PINS ARE OUTPUTS
+ANSELA = %000000;   ALL PINS ARE DIGITAL
+WPUA = 0;                    INTERN PULL-UPS DISABLED
+TRISC = %100000;       RC5 INPUT, RC0:RC4 OUTPUTS
+ANSELC = 0;                 ALL PINS ARE DIGITAL
+WPUC = 0;                     INTERN PULL-UPS IS DISABLED
+OPTION_REG.7 = 0;     WEAK PULL-UPS ENABLED BY INDIVIDUAL WPUX
+;----UART-HSERIN CONFIGURATION------
+RXPPS = %10101;                   EUSART CR/RX PORTC.5
+DEFINE HSER_RCSTA 90h;   RECEIVER ENABLED
+DEFINE HSER_TXSTA 20h;   TRANSMITTER ENABLED
+DEFINE HSER_BAUD 2400;   2400 BAUD RATE
+DEFINE HSER_CLROERR 1;  CLEAR OVERRUN ERROR 
+rc1sta.7 = 1;                              SERIAL PORT IS ENABLED
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC;  PORTC IS A DATA PORT
+DEFINE LCD_DBIT 0 ;              RC0 IS THE LSB, RC1,RC2,RC3 ARE MSB
+DEFINE LCD_RSREG PORTC ' RS IT IS IN PORTC
+DEFINE LCD_RSBIT 4;             RS IN RC4
+DEFINE LCD_EREG PORTA ;  EN IS IN PORTA
+DEFINE LCD_EBIT 0;                RA0 IS EN
+DEFINE LCD_BITS 4 ' 4 ;          IMES 
+DEFINE LCD_LINES 2 '            It is a 2-line display
+DEFINE LCD_COMMANDUS 1500 ; Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;;-----------------------------------------------------
+;----SET ALIAS--------
+PB VAR PORTA.3
+LCD1 VAR PORTA.1;
+LCD2 VAR PORTA.2;
+;----CREATE VARIABLES-----
+X VAR byte;
+VIN VAR WORD;
+VIN2 var word
+VD var byte[4];
+Y VAR BYTE;
+H VAR BYTE[5];
+A VAR BYTE;
+R VAR BYTE[7]
+IN var byte;
+OUT VAR BYTE;
+;----
+;-CLEAR VARIABLES--
+FOR Y = 0 TO 5;
+VD[Y] = "0"
+H[Y] = "0"
+NEXT Y;
+X =0;
+;---INITIALIZE LCD--------------------
+LCD1 = 1;  ENABLE LCD1
+LCD2 = 0;  DISABLE LCD2
+PAUSE 10;
+LCDOUT $FE,$28;  $28 FUNCTION SET, 4 BITS
+LCDOUT $FE,$10;  $10 SHIFT DISPLAY
+LCDOUT $FE,$0C;  $0C DISPLAY ON
+LCDOUT $FE,$06;  $06 ENTRY MODE SET
+;---
+LCD1 = 0;    DISABLE LCD1
+LCD2 = 1;    ENABLE LCD2
+PAUSE 10;
+LCDOUT $FE,$28;  $28 FUNCTION SET, 4 BITS
+LCDOUT $FE,$10;  $10 SHIFT DISPLAY
+LCDOUT $FE,$0C;  $0C DISPLAY ON
+LCDOUT $FE,$06;  $06 ENTRY MODE SET
+;--------------------------------------
+LCD1 = 1;  ENABLE LCD1
+LCD2 =1;   ENABLE LCD2
+PAUSE 1;
+LCDOUT $FE,$80,"---VOLTMETER----";
+LCDOUT $FE,$C0,"--RF RECEIVER---";
+PAUSE 1000
+MAIN:
+LCD1 = 1;  ENABLE LCD1
+LCD2 = 0;  DISABLE LCD2
+PAUSE 1;
+LCDOUT $FE,$80,"----WAITING-----";
+LCDOUT $FE,$C0,"----VOLTAGE-----";
+LCD1 = 0;  ENABLE LCD1
+LCD2 = 1;  DISABLE LCD2
+PAUSE 1;
+LCDOUT $FE,$80,"----WAITING-----";
+LCDOUT $FE,$C0,"---FREQUENCY----";
+LCD1 = 1;  ENABLE LCD1
+LCD2 = 1;  ENABLE LCD2
+;ON INTERRUPT GOTO READ_UART
+MAIN1:
+HSERIN 10,MAIN1,[WAIT("BZ"),  STR A\1]; WAIT 1S TO RECEIVE INSTRUCTION
+if a = "0" then 
+LCD1 = 1;   ENABLE  LCD1
+LCD2 = 1;   ENABLE  LCD2
+PAUSE 1;
+LCDOUT $FE,$80,"    STARTING    ";
+LCDOUT $FE,$C0,"      RX        ";
+PAUSE 1000;
+HERE_START:
+HSERIN 10,JUMP1,[WAIT ("BZ"), STR A\1]
+JUMP1:HSERIN 100,JUMP2,[WAIT ("AZ"), STR VD\4]
+JUMP2:HSERIN 10,HERE, [WAIT ("CZ"), STR H\5]
+HERE:;   
+LCD1 = 1;    ENABLE LCD1
+LCD2 = 0;    DISABLE LCD2
+PAUSE 2;
+LCDOUT $FE,$80,"RECEIVED VOLTAGE";
+LCDOUT $FE,$C0,VD[0],".",VD[1],VD[2],VD[3],"           ";
+HERE3:; LABEL HERE3
+LCD1 = 0;   DISABLE LCD1;
+LCD2 = 1;   ENABLE LCD2
+PAUSE 2;
+LCDOUT $FE,$80,"   FREQUENCY    ";
+LCDOUT $FE,$C0,H[0],H[1],H[2],H[3],H[4]," HZ         ";
+;ENABLE
+LCD1 = 1;  ENABLE LCD1;
+LCD2 = 1;  ENABLE LCD2;
+;ENABLE INTERRUPT
+if a = "0" then HERE_START
+LCD1 = 1;  ENABLE LCD1
+LCD2 = 1;  ENABLE LCD2
+PAUSE 1
+LCDOUT $FE,$80,"      END       ";  
+LCDOUT $FE,$C0,"       RX       ";
+PAUSE 1000 ;
+endif
+goto main;
+END

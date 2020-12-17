@@ -1,0 +1,51 @@
+'****************************************************************
+'*  Name    : Designing a Programmable Relay Timer              *
+'*  Practice: 2.                                                *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020                                *
+'*          : All Rights Reserved                               *
+'*  Date    : 2/27/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   : Original                                          *
+'*          :                                                   *
+'****************************************************************
+TRISC = %11111111;      PORTC set as input for dip-switch
+ANSELC = %00000000;     PORTC set to Digital
+TRISB = %00000000;      RAO and RA1 outputs for Relay and piezo buzzer
+ANSELB = %00000000;     PORTB set as Digital
+TRISA = %11111100;      RAO, RA1 set as Outputs, RA2:RA7 set to inputs
+ANSELA = %00000000;     PORTA set as Digital
+OPTION_REG.7 = 0;       Enable all pull-up resistors
+LATA = 0: LATB= 0: LATC= 0; clearing PORT Latches
+WPUA = %00000100;       Enable RPUS on RA2 only
+WPUB = %11110000;       Enable RPUS on RB4:7
+WPUC = %11111111;       Enable all RPUS on PORTC
+OSCCON = $6A;
+OSCTUNE = 0;
+
+I var byte: N var byte; Declaring variables type byte
+
+RPT: PORTA = 0;         Clearing PORTA 
+     PORTB = 0;         Clearing PORTB
+     PORTC = 0;         Clearing PORTC
+     
+STAY: IF PORTA.2 = 1 THEN GOTO STAY; Wait for RA2 to go Low
+     N = PORTC;         Transfer PORTC Reading to N
+     pause 30;          Wait 30 ms
+     IF N=0 THEN STAY;  If Reading N is zero, is not valid
+     PORTA.0=1;         Turn on LED
+    FOR i=1 to N;
+     PORTA.0 = 1;       Turn on LED until NO
+     pause 995;         Time if beeper is on
+     PORTA.1=1;         Turn on beeper for 5ms only
+pause 5;
+PORTA.1=0;              TURN OFF beeper
+if PORTA.2=0 then FINISH; Stop the process if button is pressed
+NEXT I;                 Increment variable 1
+
+FINISH:
+    PORTA.1=0;          Clearing RA1
+    PAUSE 1000;         Stop 1 Seg
+    GOTO RPT;           Start a new timing cycle
+END
+

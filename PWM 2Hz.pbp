@@ -1,0 +1,110 @@
+;****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 01/09/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+'****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 28/08/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY
+; PINS CONFIGURATION
+;--PORTA--
+TRISA = %00111100; RA3:RA4:RA5 AS INPUT 
+ANSELA = %00010100; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00001000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = %00000000; RB4:RA5:RB6 AS INPUT
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = %000000000; RB4:RA5:RB6 ENABLED PULL UPS
+;--PORTC--
+TRISC = %10000000; RA5:RA6:RA7 AS INPUT
+ANSELC = %00000000; RA6:RA7 ARE ANALOG
+WPUC = %10000000; PULL UPS DISABLED
+LATC = 0;
+;define osc 1
+;---
+;PORTA = 0;
+;PORTB = 0;
+;PORTC =0;
+;INTERRUPT CONFIGURATION
+
+INTCON = %11001000;ENABLE INTERRUPT
+IOCAN = %001000; RA3 INTERRUPT
+
+;TIMER-------------------------------------
+T1CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTB ' PORTC is LCD data port
+DEFINE LCD_DBIT 4 ' PORTB.4 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;;-----------------------------------------------------
+
+ADCON0 = %00001101;ADC ENABLED
+ADCON1 = %10000000; RIGHT JUSTIFIED
+;----------
+
+;-------------------------------------------------------------------------------
+;CCP CONFIGURATION
+CCP1CON=%10101100 
+CCPTMRS = %1111100
+RC5PPS = %00001100	
+;-------------------------------------------------------------------------------
+;VARIABLES
+C var byte: SE VAR BYTE: MI VAR BYTE: HO VAR BYTE: CH VAR BYTE:VD VAR BYTE[4]
+STATE VAR BIT: TMR VAR WORD: A VAR BYTE: CCP VAR WORD: DAT var word: DIR VAR WORD;
+AHH VAR BYTE: ALH VAR BYTE: ALM VAR BYTE: DT VAR BYTE[6]: AHM VAR BYTE
+CONTROL VAR BIT: ADC VAR WORD: VIN VAR WORD: REMAINDER VAR WORD
+TIME VAR WORD : n var byte : K var byte:CO VAR WORD
+CLEAR 
+
+
+;ALIAS ---
+LEDshow var PORTC.4
+PB1 VAR PORTC.7
+RE VAR PORTC.6
+L1 VAR PORTA.0
+L2 VAR PORTA.1
+L3 VAR PORTC.0
+L4 VAR PORTC.1
+L5 VAR PORTC.2
+L6 VAR PORTC.3
+L7 VAR PORTB.4
+L8 VAR PORTB.5
+L9 VAR PORTB.6
+L10 VAR PORTB.7   
+;-------------------------------------------------------------------------------
+PRACTICE_6:   
+;------HPWM 2 HZ -------------
+    T2CLKCON=%0101; MFINTOSC 31.25k
+    CCP = 244; PARA 2HZ
+    PR2 = 121;PARA 2HZ
+    T2CON = %11110000; PRESCALER 128
+    CCPR1L=CCP.BYTE0
+    CCPR1H = CCP.BYTE1;
+;----------------------------
+M:
+if PORTA.1 and PORTC.2 then PORTA.0=1
+GOTO m:

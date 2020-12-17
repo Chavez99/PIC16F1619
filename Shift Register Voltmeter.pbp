@@ -1,0 +1,56 @@
+'****************************************************************
+'*  Name    : Shift Register with PIC16F1619                    *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 29/05/2020                                        *
+'*  Version : 1.7                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+TRISA = %00000001;            RA0 is set as Input
+TRISB = %00000000;            PORTB is set as Output
+TRISC = %00000000;            PORTC is set as Output
+ANSELA = %00000001;           Eneable RA0 as Analogic
+ANSELB = 0;                   PORTB is set to Digital
+ANSELC = 0;                   PORTC is set to Digital 
+LATA = 0: LATB = 0: LATC = 0; Clearing all latches
+OSCCON = %01101000;           Set to 4MHz the internal oscillator 
+OSCTUNE = 0;    Oscillator module is running at the factory-calibrated frequency
+ADCON1.7 = 1;                 Right justified
+DEFINE adc_bits 10;           A/D converter is set to 10 bit resolution
+define adc_clock 3;           Set on the A/D internal clock
+define adc_sampleUs 50;       Set a time lecture of 50ms
+;-------------------------SET HPWM TO 250Hz-------------------------------------
+RC5PPS = %00001100;           Setting CCP1 as an output an eneable it
+CCP1CON = %10001100;          PWM mode selection and CCPx enabled
+PR2 = %11111101;              Value obtained from equation
+T2CON = %11000000;            Enabling timer 2
+CCPTMRS = %11111100;          CCP1 is based off Timer 2 in PWM Mode
+CCPR1L = %11110100;           VALUE obtained from equation
+CCPR1H = %00000001;           VALUE obtained from equation
+;-------------------MAIN CODE---------------------------------------------------
+V1 VAR WORD:V2 VAR word:PULSES VAR WORD;    Declaring V1,V2 & PULSES Variables as word variables
+D1 VAR BYTE:D2 VAR byte:D3 VAR BYTE;        Declaring Digit variables as byte variables
+PORTA = 0: PORTB = 0: PORTB = 0;            Clearing all PORTS 
+
+START:;                                     START label 
+V1 = 0: PULSES = 0;                         Clearing all variables
+ADRESL = 0: ADRESH = 0:; 
+D1 = 0: D2 = 0: D3 = 0;                     
+adcin 0,V1;                                 Read Voltaje on AN0
+V1.BYTE0 = ADRESL;                          Store contents of least significative bits
+V1.BYTE1 = ADRESH;                          Store contents of most significative bits
+V2 = V1*49/100;                             Equation to obtain resolution
+D2 = V2 DIG 2;                              Obtaining Digit 2 value
+D1 = V2 DIG 1;                              Obtaining Digit 1 value
+D3 = D2<<4;                                 Shift D2 content 4 positions to the left    
+PULSES = D1 + D3;                           Pulses are conformed by Digit 1 + Digit 3
+
+SHIFTOUT PORTB.4,PORTB.5,1,[PULSES];        Transfer code BCD to register HC595
+PORTB.6 = 1;                                Turn on RB6
+PAUSE 10;                                   Pause of 10mS
+PORTB.6 = 0;                                Turn off RB6
+PAUSE 150;                                  Pause of 150 mS 
+GOTO START;                                 Go to START label
+END;                                        End of the algorithm

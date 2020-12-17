@@ -1,0 +1,39 @@
+'****************************************************************
+'*  Name    : First Assignement of Practice 1		        *
+'*  Practice: 1. Reading and Writing PORTS in the PIC16F1619    *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020                                *
+'*          : All Rights Reserved                               *
+'*  Date    : 2/17/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   : Original                                          *
+'*          :                                                   *
+'****************************************************************
+ASM_CONFIG_MCLRE_OFF;      /MCLR to Vdd 
+ANSELA=0;                  PORTA set to digital
+TRISA=%111111;             PORTA set as input
+LATA=0;                    Clear Latch A
+ANSELB=0;
+TRISB=%11111111;           RB4:RB7 Set as inputs
+LATB=0;                    Clear Latch B
+ANSELC=0;                  PORTC set to digital
+LATC=0;                    Clear Latch C
+TRISC=0;                   PORTC set as output
+
+N VAR BYTE;                Declarign variable N
+result var byte;           Declaring variable result
+
+OSCTUNE=0: OSCCON=$6A;     Internal oscillator set to 4.000 MHz
+OPTION_REG.7=0;            Pull-Up resistor enabled
+WPUB=%11111111;            Pull-Up resistors in PORTB
+WPUC=%00000000;
+
+RPT:    PORTA=0 : PORTB=0 : PORTC=0; Clearing PORTS to take a new reading
+        PAUSE 200;         Wait 200 mS
+        N=~PORTB;          Transfer contents NOT PORTB to var N
+        result= N>>4;      Shift N contents 4 positions to the right, RB4:7->RC0:RC3
+        PORTC=result;      Move result contents to PORTC
+        pause 4000;        Wait 4 Seconds
+        goto RPT;          Unconditional jump to label RPT
+        end  
+

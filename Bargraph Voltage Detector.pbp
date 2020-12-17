@@ -1,0 +1,45 @@
+'****************************************************************
+'*  Name    : Practice #7. Bargraph Voltage Detector            *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/9/2020                                          *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'**************************************************************** 
+ASM_CONFIG_MCLRE_OFF;            Disabling ASM
+TRISA=%00000011;                 RA0 and RA1 set to Input
+ANSELA=%00000011;                RA0 and RA1 set to Analog
+TRISB=%00000000;                 PORTB set to Output
+ANSELB=%00000000;                PORTB set to Digital
+TRISC=%00000000;                 PORTC set to Output
+ANSELC=%00000000;                PORTC set to Digital
+LATA=0:LATB=0:LATC=0;            Clear all Latch
+VOLT VAR BYTE:I VAR BYTE;        Declaring VOLT and I as var byte
+OPTION_REG.7=1;                  Pull-Up resistor enabled
+WPUA=0:WPUB=0:WPUC=0;            Internal oscillator set to 4.000 MHz
+OSCCON=$6A:OSCTUNE=0;            Set the internal oscillator to 4MHz
+    DEFINE ADC_BITS 8;           A/D converter set to 8 bit resolution
+    DEFINE ADC_CLOCK 3;          Set on the A/D internal clock
+    DEFINE SAMPLEUS 50;          Set a time lecture of 50ms
+RPT:
+    PORTC=0;                     Starts the lecture cycle
+    adcin 1,VOLT;                Read the voltage on AN1
+    IF VOLT>$2A THEN PORTC.0=1;  >.833 
+    IF VOLT>$54 THEN PORTC.1=1;  >1.666
+    IF VOLT>$7E THEN PORTC.2=1;  >2.499
+    IF VOLT>$A8 THEN PORTC.3=1;  >3.332
+    IF VOLT>$D2 THEN PORTC.4=1;  >4.165 
+    IF VOLT>$FC THEN goto FLED;  >4.998
+    PAUSE 50;                    Pause of 50ms
+    GOTO RPT;                    Back to RPT
+FLED:
+    FOR i=1 TO 2;                Here it starts the buzzer cycle
+    PORTC.5=0;                   Set off the buzzer/led
+    PAUSE 50;                    Pause of 50ms
+    PORTC.5=1;                   Set on the buzzer/led
+    PAUSE 50;                    Pause of 50ms
+    NEXT I;                      Return I o the cycle
+    GOTO RPT;                    Back to RPT
+    end;                         End of the algorithm

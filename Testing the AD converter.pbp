@@ -1,0 +1,39 @@
+'****************************************************************
+'*  Name    : Practice #4. Testing the A/D Converter            *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/5/2020                                          *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+ASM__CONFIG_MCLRE_OFF
+TRISA =  %00000011;       RA0 and RA1 set as Input
+ANSELA = %00000011;       RA0 and RA1 set to Analogic
+TRISB = %11110000;        RB4:RB7 set as Input
+ANSELB = %00000000;       PORTB set to Digital
+TRISC = %00000000;        PORTC as Output
+ANSELC = %00000000;       PORTC set to Digital
+OPTION_REG.7=1;           Pull-Up resistor enabled
+ADCON1.7=1;               Right justified
+WPUB=%11110000;           Pull-Up resistor in RB3:7
+CM1CON0=7;                It defines that the comparator is synchronous with hysteresis and with normal power at higher speed.
+OSCCON = $6A;             Internal oscillator set to 4.000 MHz
+OSCTUNE = 0;              Oscillator module is running at the factory-calibrated frequency.
+LATA=0:LATB=0:LATC=0;     Clear Latches
+WPUA=0:WPUC=0;            Clear weak pull up resistors
+PAUSE 10;                 Pause 10ms
+DEFINE adc_bits 10;       A/D converter set to 10 bit resolution
+define adc_clock 3;       Set on the A/D internal clock
+define adc_sampleUs 50;   Set a time lecture of 50ms
+PORTA=0:PORTB=0:PORTC=0;  Clearing all PORTS
+ADRESL=0:ADRESH=0;        Clearing ADRESL & ADRESH
+V1 VAR WORD;              Declaring v1 Variable as a var word 
+RPT:adcin 1,V1;           Read Voltaje on AN1
+    PORTC=0;              Clearing PORTC
+    PORTC=ADRESL;         Store the data of ADRESL in PORTA
+    PORTA=ADRESH<<4;      Shift ADRESH contents 4 positions to the left
+    PAUSE 100;            Pause 100 mS
+  GOTO RPT;               Back to RPT
+END;                      End of the algorithm

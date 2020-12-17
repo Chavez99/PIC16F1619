@@ -1,0 +1,37 @@
+'****************************************************************
+'*  Name    : First Assignement of Practice 3                   *
+'*  Practice: 3. Programmable Traffic Controller with PIC16F1619*
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020                                *
+'*          : All Rights Reserved                               *
+'*  Date    : 2/25/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   : Original                                          *
+'*          :                                                   *
+'****************************************************************
+TRISA=%11111111;            PORTA set as input
+ANSELA=%00000000;           PORTA set to digial
+TRISB=%11111111;            PORTB set as input
+ANSELB=0;                   PORTB set to digial
+TRISC=%00000000;            PORTC set as output
+ANSELC=0;                   PORTC set to digiatl
+OPTION_REG.7=0;
+WPUB=%11111111;             Pull-Up resistor in PORTB
+WPUA=%11111111;             Pull-Up resistor in PORTA
+OSCTUNE=0 : OSCCON= $6A;
+
+T VAR BYTE : N VAR BYTE;    Declaring variable T and N
+
+RPT :PORTC=0 : PORTB=0;     Clearing PORTS
+     T=PORTB;               Transfer contents of PORTB to var T
+     N=T>>4;                Shift N contents 4 positions to the right, RB4:7->RC0:RC3
+     pause 50;
+     PORTC=%00001001;       Turn on both Green; RC0 and RC3
+     pause N * 1000;        The pause is decided by the Dip-Switch
+     PORTC=%00010010;       Turn on both Yellow; RC1 and RC4
+     pause 4000;            Pause for 4 seconds
+     PORTC=%00100100;       Turn on both Red;  RC2 and RC5
+     pause 8000;            Pause for 8 seconds
+goto RPT;
+END
+

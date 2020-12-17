@@ -1,0 +1,52 @@
+'****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 19/09/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+'*  Name    : ContadorEventos(16F1619).PBP                      *
+'*  Author  : Isaac X. Roldán                                   *
+'*  Notice  : Copyright (c) 2019                                *
+'*          : All Rights Reserved                               *
+'*  Date    : 01/05/2019                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+   ASM__CONFIG_MCLRE_OFF; /MCLR a Vdd
+   OPTION_REG.7= 1; Deshabilita resistencias de pull-up globales
+   OSCCON= $6A: OSCTUNE= 0; Oscilador interno establecido a 4 MHz
+   LATA= 0;    Latch de Datos del Puerto A configurado como Salida
+   ANSELA= 0;  Puerto A Digital
+   TRISA.5= 1; RA5 es Entrada
+   LATB= 0;    Latch de Datos del Puerto B configurado como Salida
+   ANSELB= 0;  Puerto B Digital
+   TRISB= 0;   RB Salidas
+   LATC= 0;    Latch de Datos del Puerto C configurado como Salida
+   ANSELC= 0;  Puerto C Digital
+   TRISC= 0;   RC Salidas
+   CNT1 VAR BYTE: CNT2 VAR WORD: CTOT VAR WORD; Declarando variables
+   DEFINE LCD_DREG PORTB;     Puerto B establecido para transmisión de datos
+   DEFINE LCD_DBIT 4;
+   DEFINE LCD_RSREG PORTC;    Bit Read Strobe establecido en el Puerto C
+   DEFINE LCD_RSBIT 7;        El bit 7 es Read Strobe
+   DEFINE LCD_EREG PORTC;     Establece bit E (Enable) en el Puerto C
+   DEFINE LCD_EBIT 6;         El bit 6 es el bit Enable
+   DEFINE LCD_BITS 4;         4 bits de datos para la transmisión
+   DEFINE LCD_LINES 2;        LCD establecido a dos líneas
+   DEFINE LCD_COMMANDUS 2000; Establece tiempo de retardo de comando a 2000 µS
+   DEFINE LCD_DATAUS 100;     Establece tiempo de retardo de dato a 100 µS
+   T1CON= $84; Detener Timer1
+   T1CON= $85; Iniciar Timer1    
+X: CNT1= TMR1L;              Transfiere conteo del byte Bajo a CNT1                           
+   CNT2= TMR1H * 256;        Transfiere conteo del byte Alto a CNT2
+   CTOT= CNT1 + CNT2;        Obtiene lectura total de ambos bytes
+   LCDOUT $FE,1, DEC CTOT;   Lectura en decimal en el primer renglón
+   LCDOUT $FE,$C0, BIN CTOT; Lectura en binario en el segundo renglón
+   PAUSE 10;                 10 mS para visualizar lectura
+   GOTO X;                   Ir a la etiqueta X a iniciar una nueva lectura
+   END

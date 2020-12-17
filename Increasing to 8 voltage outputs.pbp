@@ -1,0 +1,39 @@
+'****************************************************************
+'*  Name    : Practice #7.1. Increasing to 8 Voltage Outputs    *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 Tecnologico de Mexicali        *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/9/2020                                          *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+ASM_CONFIG_MCLRE_OFF;
+TRISA=%00000011;                RA 0:1 are set Inputs
+ANSELA=%00000011;               RA 0:1 are set Analog
+TRISB=%00000000;                PORTB is set output
+ANSELB=%00000000;               PORTB is set analog
+TRISC=%00000000;                PORTC is set output
+ANSELC=%00000000;               PORTC is set analog
+LATA=0:LATB=0:LATC=0;           Clearing Latches
+VOLT VAR BYTE:I VAR BYTE;       Declaring VOLT & I as byte variables
+OPTION_REG.7=1;                 All weak pull-ups are disabled
+WPUA=0:WPUB=0:WPUC=0;           Set off all the weak pull-ups
+OSCCON=$6A:OSCTUNE=0;           Set the internal oscillator to 4MHz
+    DEFINE ADC_BITS 8;          A/D converter set to 8 bit resolution
+    DEFINE ADC_CLOCK 3;         Set on the A/D internal clock
+    DEFINE SAMPLEUS 50;         Set a time lecture of 50ms
+RPT:
+    PORTC=0;                    Starts the lecture cycle
+    adcin 1,VOLT;               Read the voltage on AN1
+    IF VOLT>$1F THEN PORTC.0=1; >0.625 Volts
+    IF VOLT>$3E THEN PORTC.1=1; >1.25 Volts
+    IF VOLT>$5D THEN PORTC.2=1; >1.875 Volts
+    IF VOLT>$7C THEN PORTC.3=1; >2.5 Volts
+    IF VOLT>$9B THEN PORTC.4=1; >3.125 Volts  
+    IF VOLT>$BA THEN PORTC.5=1; >3.75 Volts  
+    IF VOLT>$D9 THEN PORTC.6=1; >4.375 Volts
+    IF VOLT>$F8 THEN PORTC.7=1; >5 Volts
+    PAUSE 50;                   Pause of 50ms
+    GOTO RPT;                   Back to RPT
+END;                            End of the algorithm

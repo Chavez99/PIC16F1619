@@ -1,0 +1,27 @@
+'****************************************************************
+'*  Name    : Comparador Inversor y no Inversor                 *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 06/05/2020                                        *
+'*  Version : 1.1                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+TRISA=0:TRISB=0;        PORTA & PORTB set as output
+TRISC=%00000110;        PORTC.1 & PORTC.2 set as input
+ANSELA=0:ANSELB=0;      PORTA & PORTB set to digital
+ANSELC=%00000110;       PORTC.1 & POIRTC.2 set to analogic
+OSCCON=%01101000;       Set the internal oscillator to 4MHz
+OSCTUNE=0;              Oscillator module is running at the factory-calibrated frequency.
+CM1CON0=%10010000;      Comparator with inverted polarity
+CM1CON1=%00000001;      Select the synchronous mode to compare
+CM2CON0=%10000000;      Comparator without inverted polarity
+CM2CON1=%00000001;      Select the synchronous mode to compare
+RPT: PORTA=0:PORTB=0:PORTC=0;     Clearing PORTS
+  PAUSE 100;            Pause for 100 mS
+  PORTC.5=CM1CON0.6;    Transfer contents of comparator to PORTC.5
+  PORTC.4=CM2CON0.6;    Transfer contents of comparator to PORTC.4
+  PAUSE 1000;           Pause for 1 second
+  GOTO RPT;             Unconditional jump to label RPT
+end;                    End of the algorithm

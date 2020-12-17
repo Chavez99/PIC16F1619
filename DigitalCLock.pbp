@@ -1,0 +1,66 @@
+'****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 28/08/2020                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY
+; PINS CONFIGURATION
+;--PORTA--
+TRISA = %00111110; RA3:RA4:RA5 AS INPUT 
+ANSELA = %00010100; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00001000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = %00000000; RB4:RA5:RB6 AS INPUT
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = %000000000; RB4:RA5:RB6 ENABLED PULL UPS
+;--PORTC--
+TRISC = %10000100; RA5:RA6:RA7 AS INPUT
+ANSELC = %00000000; RA6:RA7 ARE ANALOG
+WPUC = %10000000; PULL UPS DISABLED
+LATC = 0;
+;TIMER-------------------------------------
+T1CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTB ' PORTC is LCD data port
+DEFINE LCD_DBIT 4 ' PORTB.4 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;;-----------------------------------------------------
+ADCON0 = %00001101;ADC ENABLED
+ADCON1 = %10000000; RIGHT JUSTIFIED
+;-------------------------------------------------------------------------------
+;CCP CONFIGURATION
+CCP1CON=%10101100 
+CCPTMRS = %1111100
+RC5PPS = %00001100	
+;-------------------------------------------------------------------------------
+;VARIABLES
+CCP VAR WORD
+;-------------------------------------------------------------------------------
+PRACTICE_6:   
+;------HPWM 2 HZ -------------
+    T2CLKCON=%0101; MFINTOSC 31.25k
+    CCP = 486; PARA 2HZ
+    PR2 = 242;PARA 2HZ
+    T2CON = %11110000; PRESCALER 128
+    CCPR1L=CCP.BYTE0
+    CCPR1H = CCP.BYTE1;
+;----------------------------
+M:
+if PORTA.1 and PORTC.2 then PORTA.0=1
+GOTO m:
