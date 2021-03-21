@@ -1,0 +1,236 @@
+'*  Name    : Fan Monitoring by InfraRed Sensor PIC16F1619      *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/20/2020                                         *
+'*  Version : 1.2                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+on interrupt goto SEL; IF THERE INTERRUPT GO TO LABEL SEL
+  #CONFIG; FUSSES 
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+  #ENDCONFIG
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY    
+; PINS CONFIGURATION
+;--PORTA--
+TRISA = %00101000; RA3:RA4:RA5 AS INPUT 
+ANSELA = %00000000; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00011000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = %00000000; RB4:RA5:RB6 AS INPUT
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = %11110000; RB4:RA5:RB6 ENABLED PULL UPS
+LATB = 0
+;--PORTC--
+TRISC = %00100000; RA5:RA6:RA7 AS INPUT
+ANSELC = %00000000; RA6:RA7 ARE ANALOG
+WPUC = %01100000; PULL UPS DISABLED
+LATC = 0;
+;---
+PORTA = 0;
+PORTB = 0;
+PORTC =0;
+;INTERRUPT CONFIGURATION
+INTCON = %11001000;ENABLE INTERRUPT
+IOCAN = %001000; RA3 INTERRUPT
+;TIMER-------------------------------------
+T1CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC ' PORTC is LCD data port
+DEFINE LCD_DBIT 0 ' PORTC.0 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line         
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;----TIMER 3 SET-UP-----------------------
+T3CON = %11110101;  TURN ON TIMER 3, LFINTOSC, INPUT, 31kHz, prescale 8
+;VARIABLES
+i var byte
+C var byte;
+PULSOS VAR WORD
+FD VAR BYTE[5];
+LD VAR BYTE[4];
+LITER VAR WORD
+IN VAR BYTE
+IN2 VAR BYTE
+OUT VAR BYTE
+OUT2 VAR BYTE
+MUESTRAS VAR BYTE;
+X VAR BYTE;
+ADC VAR WORD;
+K VAR WORD;
+REMAINDER VAR WORD
+VIN VAR WORD
+CH VAR BYTE;
+SEG VAR WORD;
+VD VAR BYTE[4]
+KD VAR BYTE[4]
+STATE VAR BIT
+T VAR BYTE[4]
+TIME VAR WORD
+TMR VAR WORD;
+FLU VAR WORD
+A VAR BYTE 
+DIF VAR WORD
+DAT var word;
+DIR VAR WORD;
+ANT VAR WORD
+Counter var word;
+RV var byte;
+RD Var word
+TR VAR WORD
+CLEAR
+;ALIAS ---
+READCODE $1FF5,STATE; READ THE CONTROL VARIABLE
+IF STATE = 0  THEN
+    READCODE $1FF6,K; READ THE CONSTANT
+    READCODE $1FF7,C; READ THE PRACTIQUE
+ELSE
+    K = 100;
+    C=  0;
+    DIR = $1FF5;
+    DAT = 5;
+    GOSUB ERASE
+    GOSUB SAVE 
+ENDIF  
+LCDOUT $FE,$80,"A.Chavez "
+pause 1500
+LCDOUT $FE,$80,"PUSH THE"
+LCDOUT $FE,$C0," BUTTON "
+START:      ; SELECT THE PRACTICE TO USE
+SELECT CASE C
+    CASE 1
+        GOTO MAIN
+    CASE 2
+        goto SEL
+    END SELECT
+GOTO START
+DISABLE; DISABLE INTERRUPT
+SEL:  ;PRACTICE SELECTION
+    c=c+1;
+    IF C >1 THEN C = 1;  THE MAX PRACTICES IS 6 IN THIS CASE
+    PAUSE 200
+    IOCAF.3 = 0; CLEAR FLAG
+resume
+ENABLE; ENABLE INTERRUPT            
+;-------------------------------------------------------------------------------
+MAIN:
+    GOSUB SEQUENCE;      
+    lcdout $fe,$80,"PULSES X"
+    lcdout $fe,$c0,"3 SEC "
+    PAUSE 1000;
+    HERE_31:
+        PORTB.6=1
+        pause 100
+        LCDOUT $FE,$80,"PULSES  ";
+        TMR1L = 0; 
+        TMR1H = 0;
+    HERE3:
+    FOR i=0 to 100
+        T1CON.0 = 1 
+        pause 100
+        TMR.BYTE0 = TMR1L; LOW REGISTER
+        TMR.BYTE1 = TMR1H; HIGH REGISTER
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 10 THEN 
+                DISABLE
+                PORTB.6=0
+                PAUSE 100
+                T1CON.0 = 0
+                K = TMR; 
+                FOR X = 0 TO 2
+                    KD[X]= K DIG X;
+                NEXT X
+        LCDOUT $FE,$80,"Low Freq"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        TMR1L = 0;
+        TMR1H = 0;
+        gosub SEQUENCE  
+        ENABLE
+        GOTO HERE_31;
+    ENDIF
+IF C <> 1 THEN
+    READCODE $1FF6,K; READ THE CONSTANT
+    READCODE $1FF7,C; READ THE PRACTIQUE 
+    goto START;IF DIFFERENT RPACTICE
+    ENDIF
+GOTO HERE_31   
+;-------------------------------------------------------------------------------
+UNLOCK:             ; UNLOCK SEQUENCE
+    ASM 
+        BANKSEL PMCON2
+        MOVLW 0x55
+        MOVWF PMCON2 & 0x7F
+        MOVLW 0xAA
+        MOVWF PMCON2 & 0x7F
+        BSF PMCON1 & 0x7F,1 ; set WR bit
+        NOP
+        NOP
+    ENDASM
+RETURN
+;-------------------------------------------------------------------------------
+ERASE:                ;required sequence                                                  
+    PMCON1.4 = 1;
+    PMCON1.2 = 1;
+    GOSUB UNLOCK;
+    PMCON1.2=0;
+    PMCON1.4=0;
+RETURN
+;-------------------------------------------------------------------------------
+SEQUENCE:         ;data save sequence
+    GOSUB ERASE
+    DIR = $1FF5
+    DAT = 0;
+    GOSUB SAVE
+    DIR =$1FF6;
+    DAT = K;
+    GOSUB SAVE;
+    DIR =$1FF7
+    DAT = C
+    GOSUB SAVE 
+RETURN
+;-------------------------------------------------------------------------------
+SAVE:                 ;instruccion set
+    PMADRL = DIR.BYTE0;
+    PMADRH = DIR.BYTE1;
+    PMDATL= DAT.BYTE0;
+    PMDATH= DAT.BYTE1;
+    PMCON1 =%00000110
+    GOSUB UNLOCK;
+    STAY:IF (PMCON1.1 = 1) AND (PMCON1.3 = 1)THEN STAY;
+    IF PMCON1.3 = 1 THEN save;
+    PMCON1=%00000000
+RETURN;
+SEND:; LABEL SEND;
+    for x = 0 to 3
+          in = vd[x]
+          IN2 =T[X]
+          lookup IN,["0123456789"],out
+          LOOKUP IN2,["0123456789"],OUT2
+          VD[X]=OUT
+          T[X] = OUT2
+    next x
+
+    FOR X = 0 TO 1
+        HSEROUT ["VA", VD[3], VD[2], VD[1],VD[0],10]; SEND DATA BY WAY OF SERIAL
+        HSEROUT ["TB", T[3],T[2],T[1],T[0],10]
+        HSEROUT ["ZZ",DEC A,10]
+    NEXT X
+RETURN; GO TO THE IS CALLING
+
+
+
+
