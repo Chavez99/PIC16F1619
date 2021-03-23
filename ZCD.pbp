@@ -1,0 +1,106 @@
+
+ '****************************************************************
+'*  Name    : UNTITLED.BAS                                      *
+'*  Author  : [select VIEW...EDITOR OPTIONS]                    *
+'*  Notice  : Copyright (c) 2021 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/2/2021                                          *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+  on interrupt goto FASE; IF THERE INTERRUPT GO TO LABEL SEL
+  #CONFIG; FUSSES 
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+  #ENDCONFIG
+  
+  ;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY
+; PINS CONFIGURATION
+;--PORTA--
+TRISA = %11111101;  
+ANSELA = %11111101; 
+RA1PPS = $03
+OPTION_REG.7 = 0; 
+WPUA = 0; 
+;--PORTB--
+TRISB = 0; 
+ANSELB = 0; 
+WPUB = 0; 
+;--PORTC--
+TRISC = %11000000; 
+ANSELC = %00000000;
+WPUC = %11000000; 
+LATC = 0;
+;---
+T1CON = %00000101; 1 US POR PULSO
+INTCON = %11000000;
+PIE3.4 = 1;
+PIR3.4 = 0;
+;-----------------
+ZCD1CON = %10000011;ACTIVADO ZCD
+
+;ADCON0 = %00100101;ADC ENABLED
+;ADCON1 = %10000000; RIGHT JUSTIFIED
+;----
+CH VAR BYTE;
+ADC VAR WORD;
+VIN VAR WORD;
+REMAINDER var word
+T var word
+MOC VAR PORTB.7;
+PB1 Var PORTC.7
+PB2 VAR PORTC.6
+ANT VAR BIT
+t = 1000;
+TIMER VAR WORD
+ANT = ZCD1CON.5; EL BIT DE GUARDADO
+MAIN:
+
+    if PB1 = 0 THEN
+        T = T + 500;
+        IF T > 7500 THEN T = 7500
+        PAUSE 100
+    ENDIF
+    if PB2 = 0 THEN
+        IF T = 0 THEN 
+            T = 0
+        ELSE
+            T = T - 500;
+        ENDIF
+        
+        PAUSE 100
+    ENDIF
+    
+GOTO MAIN;
+
+
+
+;INTERRUCPCION -*-****************************
+DISABLE
+    FASE:
+    TMR1L = 0;
+    TMR1H = 0;
+    
+ 
+    HERE:
+    
+        ANT = ZCD1CON.5
+        TIMER.BYTE0 = TMR1L
+        TIMER.BYTE1 = TMR1H
+    IF TIMER < t THEN HERE
+    ;PIR3.4 = 0;
+        ;PAUSEUS t
+        MOC = 1;
+        PAUSEUS 3
+        moc = 0;
+    PIR3.4 = 0;
+    resume
+ENABLE
+
+
+
