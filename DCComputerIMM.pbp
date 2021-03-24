@@ -1,0 +1,126 @@
+'*  Name    : Motor Fan DC Current Monitoring with PIC161619    *
+'*  Author  : Arturo Alejandro Chavez Murga                     *
+'*  Notice  : Copyright (c) 2021 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/20/2020                                         *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+  #CONFIG; FUSSES 
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+  #ENDCONFIG
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY    
+; PORTS CONFIGURATION
+;--PORTA--
+TRISA = %00111100; RA3:RA4:RA5 AS INPUT 
+ANSELA = %00000100; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00011000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = %00111000; ENABLE RB6 AS OUTPUT
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = %11110000; RB4:RA5:RB6 ENABLED PULL UPS
+LATB = 0
+;--PORTC--
+TRISC = %11100000; RA5:RA6:RA7 AS INPUT
+ANSELC = %10000000; RA6:RA7 ARE ANALOG
+WPUC = %01100000; PULL UPS DISABLED
+LATC = 0;
+;---Cleaning Ports
+PORTA = 0;
+PORTB = 0;
+PORTC =0;
+;TIMER-------------------------------------
+T1CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC ' PORTC is LCD data port
+DEFINE LCD_DBIT 0 ' PORTC.0 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line         
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;----------------------------------------------------
+ADCON0 = %00001101;ADC ENABLED
+ADCON1 = %10000000; RIGHT JUSTIFIED
+;---------------------------------
+;VARIABLES
+X VAR BYTE;
+ADC VAR WORD;
+REMAINDER VAR WORD
+VIN VAR WORD
+MC VAR WORD
+CH VAR BYTE;
+CD VAR BYTE[4]
+i var byte
+s var byte
+q var byte
+F var byte
+SAMPLE VAR byte[80]
+SUM VAR WORD 
+CLEAR
+;Message
+LCDOUT $FE,$80,"A.Chavez"
+pause 1500
+START:      ; START label           
+;-------------------------------------------------------------------------------             
+CURRENTMONITOR:
+    lcdout $fe,$80,"Current    "
+    lcdout $fe,$c0,"--------"
+    PAUSE 1000;
+HERE:
+    PORTB.6=1
+    CH = 9;CHANNEL 9   
+    GOSUB ADC_READ; GO TO SEQUENCE 
+    LCDOUT $FE,$C0,"I=",DEC CD[3],".",DEC CD[2],DEC CD[1],DEC CD[0]," "
+    GOTO HERE;                
+;-----------------------------
+ADC_READ:
+    SUM=0
+    MC=0
+    CH = CH<<2;
+    ADCON0 = CH^%10000001; BITWISE XNOR
+    for i=0 to 80
+        ADCON0.1 = 1; 
+        HERE_ADC: IF ADCON0.1 = 1 THEN HERE_ADC; STAY HERE WHILE CONVERSION IS ready
+        ADCON0.0 = 0;
+        ADC.BYTE0 = ADRESL;     SAVE LOWER REGISTER OF THE ADC IN VARIABLE VIN
+        ADC.BYTE1 = ADRESH;     SAVE HIGHER REGISTER OF THE ADC IN VARIABLE VIN
+        DISABLE
+        REMAINDER = ADC*4887;              MULTIPLYING BY RESLSB = 4.8887
+        VIN = div32 1000;              PERFORM 16-BITS DIVISION 
+        ENABLE
+        SAMPLE[i]=VIN/10
+    NEXT I
+    SUM=0
+    MC=0
+    for s=0 to 80
+        SUM = SUM + SAMPLE[S]
+    next s
+    MC = SUM/81
+    if MC<=20 then
+        F = F+1 
+        ENDIF
+    if F>=5 then 
+        PORTB.6=0
+        PAUSE 1000
+        F=0
+    ENDIF 
+    q = q+1
+    if q>=20 then
+        q=0
+        F=0 
+    endif  
+    FOR X = 0 TO 3
+        CD[X] = MC DIG X
+    NEXT X 
+return
