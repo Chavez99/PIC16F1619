@@ -1,0 +1,141 @@
+'*  Name    : Fan Monitoring by Hall Effect Sensor PIC16F1619   *
+'*  Author  : Chavez Murga Arturo Alejandro                     *
+'*  Notice  : Copyright (c) 2020 [select VIEW...EDITOR OPTIONS] *
+'*          : All Rights Reserved                               *
+'*  Date    : 3/20/2020                                         *
+'*  Version : 1.2                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+  #CONFIG; FUSSES 
+    __config _CONFIG1,  _FOSC_INTOSC & _PWRTE_ON & _MCLRE_OFF & _CP_OFF & _BOREN_ON & _CLKOUTEN_OFF
+    __config _CONFIG2,  _WRT_OFF & _PPS1WAY_OFF & _ZCD_OFF & _PLLEN_OFF & _STVREN_ON & _BORV_LO & _LVP_OFF
+    __config _CONFIG3,  _WDTCPS_WDTCPS4 & _WDTE_ON & _WDTCWS_WDTCWS100 & _WDTCCS_LFINTOSC
+  #ENDCONFIG
+;CONFIGURATION OF THE INTERNAL CLOCK
+OSCCON = %01101010; $6A, INTERN CLOCK AT 4MHZ
+OSCSTAT = %00011111; $1F, INTERNAL CLOCK ENABLE
+OSCTUNE = 0;INTERNAL OSC WORKS AT THE CALIBRATED FREQUENCY    
+; PINS CONFIGURATION
+;--PORTA--
+TRISA = %00101000; RA3:RA4:RA5 AS INPUT 
+ANSELA = 0; ALL PINS ARE DIGITAL
+OPTION_REG.7=0; PULL-UPS ENABLED
+WPUA = %00011000; RA2:RA4 ENABLED PULL UPS
+;--PORTB--
+TRISB = 0; 
+ANSELB = 0; ALL PINS ARE DIGITAL
+WPUB = 0; RB4:RA5:RB6 ENABLED PULL UPS
+LATB = 0
+;--PORTC--
+TRISC = %00100000; RA5:RA6:RA7 AS INPUT
+ANSELC = 0; RA6:RA7 ARE ANALOG
+WPUC = 0; PULL UPS DISABLED
+LATC = 0;
+;---
+PORTA = 0;
+PORTB = 0;
+PORTC = 0;
+;TIMER-------------------------------------
+T1CON = %10000100;ENABLE TIMER 1, T1CKL
+;--LCD CONFIGURATION ----------------------
+DEFINE LCD_DREG PORTC ' PORTC is LCD data port
+DEFINE LCD_DBIT 0 ' PORTC.0 is the data LSB
+DEFINE LCD_RSREG PORTA ' RS is connected to PORTA.0
+DEFINE LCD_RSBIT 0
+DEFINE LCD_EREG PORTA ' E is connected to PORTA.1
+DEFINE LCD_EBIT 1
+DEFINE LCD_BITS 4 ' 4  data line         
+DEFINE LCD_LINES 2 '  2-line display
+DEFINE LCD_COMMANDUS 1500 ' Use 1500uS command delay
+DEFINE LCD_DATAUS 44 ' Use 44uS data delay
+;----TIMER 3 SET-UP-----------------------
+T3CON = %11110101;  TURN ON TIMER 3, LFINTOSC, INPUT, 31kHz, prescale 8
+;VARIABLES
+i var byte
+PULSOS VAR WORD
+IN2 VAR BYTE
+X VAR BYTE;
+K VAR WORD;
+KD VAR BYTE[4]
+TMR VAR WORD;
+R var byte
+CLEAR
+;ALIAS ---
+LCDOUT $FE,$80,"A.Chavez "
+pause 1500         
+;-------------------------------------------------------------------------------
+MAIN:      
+    lcdout $fe,$80,"PULSES X"
+    lcdout $fe,$c0,"5 SEC "
+    PAUSE 1000;
+    HERE_B:
+        PORTB.7=1
+        pause 100
+        LCDOUT $FE,$80,"PULSES  ";
+        TMR1L = 0; 
+        TMR1H = 0;
+;FIRST HALL SENSOR READING
+    PORTB.4=0
+    PORTB.5=0
+    PORTB.6=0
+    FOR i=0 to 100
+        T1CON.0 = 1 
+        pause 100
+        TMR.BYTE0 = TMR1L; LOW REGISTER
+        TMR.BYTE1 = TMR1H; HIGH REGISTER 
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 10 THEN 
+                DISABLE
+                PORTB.7=0
+                PAUSE 100
+                T1CON.0 = 0
+                ;K = TMR*6; 
+                ;FOR X = 0 TO 2
+                ;    R[X]= K DIG X;
+                ;NEXT X
+        LCDOUT $FE,$80,"RPM"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        PORTB.7=1
+        TMR1L = 0;
+        TMR1H = 0; 
+        ENABLE
+    ENDIF
+;SECOND HALL SENSOR READING
+    PORTB.4=1
+    PORTB.5=0
+    PORTB.6=0
+    pause 10
+    FOR i=0 to 100
+        T1CON.0 = 1 
+        pause 100
+        TMR.BYTE0 = TMR1L; LOW REGISTER
+        TMR.BYTE1 = TMR1H; HIGH REGISTER 
+        LCDOUT $FE,$C0,DEC TMR,"       "
+    next i
+    IF TMR <= 10 THEN 
+                DISABLE
+                PORTB.7=0
+                PAUSE 100
+                T1CON.0 = 0
+                ;K = TMR*6; 
+                ;FOR X = 0 TO 2
+                ;    R[X]= K DIG X;
+                ;NEXT X
+        LCDOUT $FE,$80,"RPM"  
+        LCDOUT $FE,$C0,DEC TMR,"       "
+        PAUSE 3000
+        PORTB.7=1
+        pausE 100
+        TMR1L = 0;
+        TMR1H = 0; 
+        ENABLE
+    ENDIF 
+    ;PORTB.4=0
+    ;PORTB.5=0
+    ;PORTB.6=0
+    ;pause 10  
+GOTO HERE_B   
+;-------------------------------------------------------------------------------
